@@ -1,7 +1,7 @@
 /** Schema management: list, create, delete extraction schemas. */
 
 import { useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '#/lib/api-client'
 import { queryKeys } from '#/lib/query-keys'
@@ -9,7 +9,8 @@ import type { SchemaResponse, SchemaCreateRequest, SchemaField } from '#/lib/typ
 import { PageLayout } from '#/components/page-layout'
 import { TableRowSkeleton } from '#/components/loading-skeleton'
 import { useToast } from '#/components/toast-provider'
-import { Plus, Trash2 } from 'lucide-react'
+import { SchemaSuggestForm } from '#/components/schema-suggest-form'
+import { Plus, Trash2, Sparkles, LayoutGrid } from 'lucide-react'
 
 export const Route = createFileRoute('/schemas')({ component: SchemasPage })
 
@@ -116,6 +117,7 @@ function SchemasPage() {
   const { toast } = useToast()
   const qc = useQueryClient()
   const [showForm, setShowForm] = useState(false)
+  const [showSuggest, setShowSuggest] = useState(false)
 
   const { data: schemas = [], isLoading } = useQuery({
     queryKey: queryKeys.schemas.list(),
@@ -135,15 +137,30 @@ function SchemasPage() {
     <PageLayout
       title="Schemas"
       actions={
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
-        >
-          <Plus size={14} /> New Schema
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/templates"
+            className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+          >
+            <LayoutGrid size={14} /> Browse Templates
+          </Link>
+          <button
+            onClick={() => setShowSuggest(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700 hover:bg-blue-100"
+          >
+            <Sparkles size={14} /> Auto-Suggest
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
+          >
+            <Plus size={14} /> New Schema
+          </button>
+        </div>
       }
     >
       {showForm && <CreateSchemaForm onClose={() => setShowForm(false)} />}
+      {showSuggest && <SchemaSuggestForm onClose={() => setShowSuggest(false)} />}
       <div className="rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-sm">
           <thead>

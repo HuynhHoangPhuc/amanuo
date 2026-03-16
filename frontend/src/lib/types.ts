@@ -142,6 +142,38 @@ export interface WorkspaceResponse {
   created_at: string
 }
 
+// Schema suggest & template types
+export interface SuggestedField {
+  label: string
+  type: 'text' | 'number' | 'date' | 'boolean'
+  occurrence: string
+  confidence: number
+}
+
+export interface SuggestSchemaResponse {
+  fields: SuggestedField[]
+  warning: string
+  beta: boolean
+}
+
+export interface SchemaTemplate {
+  id: string
+  name: string
+  description: string
+  category: string
+  fields: SchemaField[]
+  languages: string[]
+  is_curated: boolean
+  usage_count: number
+  version: string
+  created_at: string
+}
+
+export interface TemplateListResponse {
+  templates: SchemaTemplate[]
+  total: number
+}
+
 // Auth types
 export interface LoginRequest {
   email: string

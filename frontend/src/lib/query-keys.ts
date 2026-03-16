@@ -31,4 +31,10 @@ export const queryKeys = {
     all: () => ['api-keys'] as const,
     list: () => ['api-keys', 'list'] as const,
   },
+  templates: {
+    all: () => ['templates'] as const,
+    list: (category?: string, lang?: string, search?: string) =>
+      ['templates', 'list', category, lang, search] as const,
+    detail: (id: string) => ['templates', 'detail', id] as const,
+  },
 }

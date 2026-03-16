@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WebhooksRouteImport } from './routes/webhooks'
+import { Route as TemplatesRouteImport } from './routes/templates'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SchemasRouteImport } from './routes/schemas'
 import { Route as PipelinesRouteImport } from './routes/pipelines'
@@ -21,6 +22,11 @@ import { Route as JobsJobIdRouteImport } from './routes/jobs_.$jobId'
 const WebhooksRoute = WebhooksRouteImport.update({
   id: '/webhooks',
   path: '/webhooks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TemplatesRoute = TemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -66,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/pipelines': typeof PipelinesRoute
   '/schemas': typeof SchemasRoute
   '/settings': typeof SettingsRoute
+  '/templates': typeof TemplatesRoute
   '/webhooks': typeof WebhooksRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
 }
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/pipelines': typeof PipelinesRoute
   '/schemas': typeof SchemasRoute
   '/settings': typeof SettingsRoute
+  '/templates': typeof TemplatesRoute
   '/webhooks': typeof WebhooksRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
 }
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/pipelines': typeof PipelinesRoute
   '/schemas': typeof SchemasRoute
   '/settings': typeof SettingsRoute
+  '/templates': typeof TemplatesRoute
   '/webhooks': typeof WebhooksRoute
   '/jobs_/$jobId': typeof JobsJobIdRoute
 }
@@ -99,6 +108,7 @@ export interface FileRouteTypes {
     | '/pipelines'
     | '/schemas'
     | '/settings'
+    | '/templates'
     | '/webhooks'
     | '/jobs/$jobId'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/pipelines'
     | '/schemas'
     | '/settings'
+    | '/templates'
     | '/webhooks'
     | '/jobs/$jobId'
   id:
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/pipelines'
     | '/schemas'
     | '/settings'
+    | '/templates'
     | '/webhooks'
     | '/jobs_/$jobId'
   fileRoutesById: FileRoutesById
@@ -130,12 +142,20 @@ export interface RootRouteChildren {
   PipelinesRoute: typeof PipelinesRoute
   SchemasRoute: typeof SchemasRoute
   SettingsRoute: typeof SettingsRoute
+  TemplatesRoute: typeof TemplatesRoute
   WebhooksRoute: typeof WebhooksRoute
   JobsJobIdRoute: typeof JobsJobIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/templates': {
+      id: '/templates'
+      path: '/templates'
+      fullPath: '/templates'
+      preLoaderRoute: typeof TemplatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/webhooks': {
       id: '/webhooks'
       path: '/webhooks'
@@ -202,6 +222,7 @@ const rootRouteChildren: RootRouteChildren = {
   PipelinesRoute: PipelinesRoute,
   SchemasRoute: SchemasRoute,
   SettingsRoute: SettingsRoute,
+  TemplatesRoute: TemplatesRoute,
   WebhooksRoute: WebhooksRoute,
   JobsJobIdRoute: JobsJobIdRoute,
 }
