@@ -14,6 +14,13 @@ dependencies = [
     "gradio>=6.9.0",
     "pyjwt>=2.12.1",
     "bcrypt>=5.0.0",
+    "sqlalchemy[asyncio]>=2.0.48",
+    "asyncpg>=0.31.0",
+    "alembic>=1.18.4",
+    "arq>=0.27.0",
+    "redis>=5.3.1",
+    "fakeredis>=2.34.1",
+    "broadcaster[redis]>=0.3.1",
 ]
 
 [project.optional-dependencies]
