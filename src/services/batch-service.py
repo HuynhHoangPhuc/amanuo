@@ -1,11 +1,15 @@
-"""Batch processing — CRUD, counter updates, status derivation."""
+"""Batch processing — CRUD, counter updates, status derivation — SQLAlchemy ORM."""
 
 import importlib
 import uuid
 from datetime import datetime
 
-from src.config import settings
-from src.database import get_connection, get_db_path
+from sqlalchemy import select, update, delete, func
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.database import get_session_factory
+from src.models.batch import BatchORM, BatchItemORM
+from src.models.job import JobORM
 
 _batch_models = importlib.import_module("src.models.batch")
 BatchResponse = _batch_models.BatchResponse
@@ -13,8 +17,8 @@ BatchItemResponse = _batch_models.BatchItemResponse
 BatchListResponse = _batch_models.BatchListResponse
 
 
-async def _get_db():
-    return await get_connection(get_db_path(settings.database_url))
+def _get_session():
+    return get_session_factory()()
 
 
 async def create_batch(workspace_id: str, total_items: int, pipeline_id: str | None = None) -> str:
@@ -22,16 +26,17 @@ async def create_batch(workspace_id: str, total_items: int, pipeline_id: str | N
     batch_id = str(uuid.uuid4())
     now = datetime.now().isoformat()
 
-    db = await _get_db()
-    try:
-        await db.execute(
-            """INSERT INTO batches (id, workspace_id, status, total_items, pipeline_id, created_at)
-               VALUES (?, ?, 'pending', ?, ?, ?)""",
-            (batch_id, workspace_id, total_items, pipeline_id, now),
+    async with _get_session() as session:
+        batch = BatchORM(
+            id=batch_id,
+            workspace_id=workspace_id,
+            status="pending",
+            total_items=total_items,
+            pipeline_id=pipeline_id,
+            created_at=now,
         )
-        await db.commit()
-    finally:
-        await db.close()
+        session.add(batch)
+        await session.commit()
 
     return batch_id
 
@@ -40,134 +45,141 @@ async def add_batch_item(batch_id: str, job_id: str, filename: str | None, index
     """Link a job to a batch as an item."""
     item_id = str(uuid.uuid4())
 
-    db = await _get_db()
-    try:
-        await db.execute(
-            """INSERT INTO batch_items (id, batch_id, job_id, item_index, filename, status)
-               VALUES (?, ?, ?, ?, ?, 'pending')""",
-            (item_id, batch_id, job_id, index, filename),
+    async with _get_session() as session:
+        item = BatchItemORM(
+            id=item_id,
+            batch_id=batch_id,
+            job_id=job_id,
+            item_index=index,
+            filename=filename,
+            status="pending",
         )
-        await db.commit()
-    finally:
-        await db.close()
+        session.add(item)
+        await session.commit()
 
     return item_id
 
 
 async def update_batch_counters(batch_id: str, completed_delta: int = 0, failed_delta: int = 0) -> None:
     """Atomically update batch counters and derive status."""
-    db = await _get_db()
-    try:
-        if completed_delta:
-            await db.execute(
-                "UPDATE batches SET completed_items = completed_items + ? WHERE id = ?",
-                (completed_delta, batch_id),
-            )
-        if failed_delta:
-            await db.execute(
-                "UPDATE batches SET failed_items = failed_items + ? WHERE id = ?",
-                (failed_delta, batch_id),
-            )
-
-        # Derive status from counters
-        cursor = await db.execute(
-            "SELECT total_items, completed_items, failed_items FROM batches WHERE id = ?",
-            (batch_id,),
+    async with _get_session() as session:
+        # Fetch current counters
+        result = await session.execute(
+            select(BatchORM).where(BatchORM.id == batch_id)
         )
-        row = await cursor.fetchone()
-        if row:
-            status = _derive_status(row["total_items"], row["completed_items"], row["failed_items"])
-            completed_at = datetime.now().isoformat() if status in ("completed", "partial", "failed") else None
-            if completed_at:
-                await db.execute(
-                    "UPDATE batches SET status = ?, completed_at = ? WHERE id = ?",
-                    (status, completed_at, batch_id),
-                )
-            else:
-                await db.execute("UPDATE batches SET status = ? WHERE id = ?", (status, batch_id))
+        batch = result.scalar_one_or_none()
+        if not batch:
+            return
 
-        await db.commit()
-    finally:
-        await db.close()
+        new_completed = batch.completed_items + completed_delta
+        new_failed = batch.failed_items + failed_delta
+        status = _derive_status(batch.total_items, new_completed, new_failed)
+        completed_at = (
+            datetime.now().isoformat()
+            if status in ("completed", "partial", "failed")
+            else None
+        )
+
+        values = {
+            "completed_items": new_completed,
+            "failed_items": new_failed,
+            "status": status,
+        }
+        if completed_at:
+            values["completed_at"] = completed_at
+
+        await session.execute(update(BatchORM).where(BatchORM.id == batch_id).values(**values))
+        await session.commit()
+
+    # Publish real-time progress event (non-critical)
+    try:
+        _broadcaster = importlib.import_module("src.services.event-broadcaster")
+        await _broadcaster.publish(batch.workspace_id, "batch.progress", {
+            "batch_id": batch_id,
+            "completed": new_completed,
+            "failed": new_failed,
+            "total": batch.total_items,
+            "status": status,
+        })
+    except Exception:
+        pass
 
 
 async def get_batch(batch_id: str, workspace_id: str) -> BatchResponse | None:
     """Get batch with item details."""
-    db = await _get_db()
-    try:
-        cursor = await db.execute(
-            "SELECT * FROM batches WHERE id = ? AND workspace_id = ?",
-            (batch_id, workspace_id),
+    async with _get_session() as session:
+        result = await session.execute(
+            select(BatchORM).where(
+                BatchORM.id == batch_id, BatchORM.workspace_id == workspace_id
+            )
         )
-        row = await cursor.fetchone()
-        if not row:
+        batch = result.scalar_one_or_none()
+        if not batch:
             return None
 
-        # Load items
-        cursor = await db.execute(
-            "SELECT * FROM batch_items WHERE batch_id = ? ORDER BY item_index",
-            (batch_id,),
+        items_result = await session.execute(
+            select(BatchItemORM)
+            .where(BatchItemORM.batch_id == batch_id)
+            .order_by(BatchItemORM.item_index)
         )
-        items = await cursor.fetchall()
+        items = items_result.scalars().all()
 
-        return _row_to_response(row, items)
-    finally:
-        await db.close()
+        return _orm_to_response(batch, items)
 
 
 async def list_batches(workspace_id: str, limit: int = 20, offset: int = 0) -> BatchListResponse:
     """List batches for a workspace."""
-    db = await _get_db()
-    try:
-        cursor = await db.execute(
-            "SELECT COUNT(*) FROM batches WHERE workspace_id = ?", (workspace_id,)
+    async with _get_session() as session:
+        total_result = await session.execute(
+            select(func.count()).select_from(BatchORM).where(BatchORM.workspace_id == workspace_id)
         )
-        total = (await cursor.fetchone())[0]
+        total = total_result.scalar_one()
 
-        cursor = await db.execute(
-            "SELECT * FROM batches WHERE workspace_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
-            (workspace_id, limit, offset),
+        rows_result = await session.execute(
+            select(BatchORM)
+            .where(BatchORM.workspace_id == workspace_id)
+            .order_by(BatchORM.created_at.desc())
+            .limit(limit)
+            .offset(offset)
         )
-        rows = await cursor.fetchall()
+        rows = rows_result.scalars().all()
 
         return BatchListResponse(
-            batches=[_row_to_response(r) for r in rows],
+            batches=[_orm_to_response(r) for r in rows],
             total=total,
         )
-    finally:
-        await db.close()
 
 
 async def cancel_batch(batch_id: str, workspace_id: str) -> bool:
     """Cancel pending items in a batch."""
-    db = await _get_db()
-    try:
+    async with _get_session() as session:
         # Verify ownership
-        cursor = await db.execute(
-            "SELECT id FROM batches WHERE id = ? AND workspace_id = ?",
-            (batch_id, workspace_id),
+        result = await session.execute(
+            select(BatchORM).where(
+                BatchORM.id == batch_id, BatchORM.workspace_id == workspace_id
+            )
         )
-        if not await cursor.fetchone():
+        if not result.scalar_one_or_none():
             return False
 
         # Cancel pending jobs in the batch
-        await db.execute(
-            """UPDATE jobs SET status = 'failed', error = 'Batch cancelled'
-               WHERE batch_id = ? AND status = 'pending'""",
-            (batch_id,),
+        await session.execute(
+            update(JobORM)
+            .where(JobORM.batch_id == batch_id, JobORM.status == "pending")
+            .values(status="failed", error="Batch cancelled")
         )
-        await db.execute(
-            "UPDATE batch_items SET status = 'cancelled' WHERE batch_id = ? AND status = 'pending'",
-            (batch_id,),
+        await session.execute(
+            update(BatchItemORM)
+            .where(BatchItemORM.batch_id == batch_id, BatchItemORM.status == "pending")
+            .values(status="cancelled")
         )
-        await db.execute(
-            "UPDATE batches SET status = 'failed', completed_at = ? WHERE id = ?",
-            (datetime.now().isoformat(), batch_id),
+        await session.execute(
+            update(BatchORM)
+            .where(BatchORM.id == batch_id)
+            .values(status="failed", completed_at=datetime.now().isoformat())
         )
-        await db.commit()
+        await session.commit()
         return True
-    finally:
-        await db.close()
 
 
 def _derive_status(total: int, completed: int, failed: int) -> str:
@@ -184,26 +196,31 @@ def _derive_status(total: int, completed: int, failed: int) -> str:
     return "completed"
 
 
-def _row_to_response(row, items=None) -> BatchResponse:
-    """Convert DB row to BatchResponse."""
-    total = row["total_items"]
-    completed = row["completed_items"]
+def _orm_to_response(batch: BatchORM, items=None) -> BatchResponse:
+    """Convert ORM instance to BatchResponse."""
+    total = batch.total_items
+    completed = batch.completed_items
     progress = (completed / total * 100) if total > 0 else 0.0
 
     item_list = None
     if items is not None:
         item_list = [
             BatchItemResponse(
-                id=i["id"], job_id=i["job_id"], filename=i["filename"],
-                status=i["status"], item_index=i["item_index"],
+                id=i.id, job_id=i.job_id, filename=i.filename,
+                status=i.status, item_index=i.item_index,
             )
             for i in items
         ]
 
     return BatchResponse(
-        id=row["id"], status=row["status"], total_items=total,
-        completed_items=completed, failed_items=row["failed_items"],
-        progress_pct=round(progress, 1), pipeline_id=row["pipeline_id"],
-        created_at=row["created_at"], completed_at=row["completed_at"],
+        id=batch.id,
+        status=batch.status,
+        total_items=total,
+        completed_items=completed,
+        failed_items=batch.failed_items,
+        progress_pct=round(progress, 1),
+        pipeline_id=batch.pipeline_id,
+        created_at=batch.created_at,
+        completed_at=batch.completed_at,
         items=item_list,
     )

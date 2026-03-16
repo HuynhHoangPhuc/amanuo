@@ -11,8 +11,27 @@ services:
     command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
       - redis
+      - postgres
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: amanuo
+      POSTGRES_USER: amanuo
+      POSTGRES_PASSWORD: amanuo
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  redis-data:
+  pgdata:
