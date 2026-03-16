@@ -15,6 +15,9 @@ venv/
 
 # Database
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 
 # IDE
 .vscode/
