@@ -24,7 +24,8 @@ amanuo/
 │   │   ├── workspace.py             # Workspace ORM model, user isolation
 │   │   ├── extraction-review.py     # ExtractionReview ORM model (HITL reviews)
 │   │   ├── accuracy-metric.py       # AccuracyMetric ORM model (dashboard)
-│   │   └── schema-template.py       # SchemaTemplate ORM model (marketplace)
+│   │   ├── schema-template.py       # SchemaTemplate ORM model (marketplace)
+│   │   └── analytics-models.py      # Pydantic models (DailyUsageStat, DailyCostStat, ProviderStat, AnalyticsOverview)
 │   │
 │   ├── routers/
 │   │   ├── __init__.py
@@ -35,6 +36,7 @@ amanuo/
 │   │   ├── pipelines.py             # CRUD /pipelines (YAML config)
 │   │   ├── reviews.py               # POST /reviews/{id}, GET /reviews (HITL review system)
 │   │   ├── accuracy.py              # GET /accuracy (metrics + computation)
+│   │   ├── analytics.py             # GET /analytics/usage, /costs, /providers, /overview; POST /refresh
 │   │   ├── schemas.py               # CRUD /schemas, version history
 │   │   ├── templates.py             # GET /templates, POST /import, POST /schemas/suggest
 │   │   ├── webhooks.py              # Register, test, delivery logs
@@ -53,13 +55,14 @@ amanuo/
 │   │   ├── webhook-delivery.py      # Async delivery queue, retry backoff
 │   │   ├── extraction-worker.py     # ARQ job enqueue, provider selection, scoring, review gating
 │   │   ├── redis-pool.py            # ARQ Redis connection pool singleton
-│   │   ├── arq-worker-settings.py   # ARQ worker config, job handlers
+│   │   ├── arq-worker-settings.py   # ARQ worker config, cron job (5min view refresh)
 │   │   ├── event-broadcaster.py     # Redis pub/sub for WebSocket events
 │   │   ├── router-service.py        # Provider selection (local→cloud fallback)
 │   │   ├── confidence-scorer.py     # Field-level aggregation
 │   │   ├── review-service.py        # Review CRUD, correction diff, auto-review logic
 │   │   ├── prompt-hint-builder.py   # Aggregate corrections → hint generation
 │   │   ├── accuracy-service.py      # Compute + store accuracy metrics
+│   │   ├── analytics-service.py     # Analytics queries (daily usage/cost, provider stats)
 │   │   ├── schema-suggest-service.py # VLM field suggestion for schema design
 │   │   ├── template-service.py      # Schema template CRUD + seeding
 │   │   ├── folder-watcher.py        # watchfiles batch aggregation (60s window)
@@ -113,23 +116,24 @@ amanuo/
 │       ├── gradio-app.py            # Gradio web interface (optional)
 │       └── ui-helpers.py            # Form builders, utilities
 │
-├── frontend/                         # React 19 + TanStack (25 files, ~2,300 LOC)
+├── frontend/                         # React 19 + TanStack (28 files, ~2,600 LOC)
 │   ├── src/
 │   │   ├── routes/                  # TanStack file-based routing
-│   │   │   ├── __root.tsx           # Root layout (header, sidebar)
-│   │   │   ├── index.tsx            # Dashboard
-│   │   │   ├── jobs.tsx             # Job list
-│   │   │   ├── jobs_.$jobId.tsx     # Job detail
-│   │   │   ├── reviews.tsx          # Review queue list
-│   │   │   ├── reviews_.$jobId.tsx  # Side-by-side review page
-│   │   │   ├── accuracy.tsx         # Accuracy dashboard
-│   │   │   ├── schemas.tsx          # Schema management
-│   │   │   ├── templates.tsx        # Template marketplace
-│   │   │   ├── batches.tsx          # Batch tracking
+│   │   │   ├── __root.tsx                   # Root layout (header, sidebar)
+│   │   │   ├── index.tsx                    # Dashboard
+│   │   │   ├── jobs.tsx                     # Job list
+│   │   │   ├── jobs_.$jobId.tsx             # Job detail
+│   │   │   ├── reviews.tsx                  # Review queue list
+│   │   │   ├── reviews_.$jobId.tsx          # Side-by-side review page
+│   │   │   ├── accuracy.tsx                 # Accuracy dashboard
+│   │   │   ├── analytics.tsx                # Analytics dashboard (/analytics)
+│   │   │   ├── schemas.tsx                  # Schema management
+│   │   │   ├── templates.tsx                # Template marketplace
+│   │   │   ├── batches.tsx                  # Batch tracking
 │   │   │   ├── batches_.$batchId.review.tsx # Batch review table
-│   │   │   ├── pipelines.tsx        # Pipeline editor
-│   │   │   ├── webhooks.tsx         # Webhook config
-│   │   │   └── settings.tsx         # User settings
+│   │   │   ├── pipelines.tsx                # Pipeline editor
+│   │   │   ├── webhooks.tsx                 # Webhook config
+│   │   │   └── settings.tsx                 # User settings
 │   │   ├── components/
 │   │   │   ├── Header.tsx           # Top navigation
 │   │   │   ├── SidebarNav.tsx       # Left sidebar
@@ -138,9 +142,12 @@ amanuo/
 │   │   │   ├── document-viewer.tsx  # PDF/image viewer for reviews
 │   │   │   ├── field-editor.tsx     # Inline editable field
 │   │   │   ├── review-toolbar.tsx   # Approve/correct/skip buttons
-│   │   │   ├── accuracy-chart.tsx   # SVG line chart for dashboard
-│   │   │   ├── field-accuracy-table.tsx # Per-field breakdown table
-│   │   │   ├── schema-suggest-form.tsx # Upload + suggest UI
+│   │   │   ├── accuracy-chart.tsx            # SVG line chart for dashboard
+│   │   │   ├── field-accuracy-table.tsx      # Per-field breakdown table
+│   │   │   ├── usage-area-chart.tsx          # Recharts AreaChart for job volume by status
+│   │   │   ├── cost-bar-chart.tsx            # Recharts BarChart for daily cost by provider
+│   │   │   ├── provider-comparison-chart.tsx # Recharts horizontal BarChart for providers
+│   │   │   ├── schema-suggest-form.tsx       # Upload + suggest UI
 │   │   │   ├── template-card.tsx    # Template marketplace card
 │   │   │   ├── suggested-fields-editor.tsx # Edit suggested fields
 │   │   │   ├── loading-skeleton.tsx # Loading state
@@ -163,35 +170,37 @@ amanuo/
 │   ├── vite.config.ts               # Vite build config (proxy to localhost:8000)
 │   └── index.html                   # HTML entry point
 │
-├── tests/                            # 204 tests (148 unit + 56 E2E), 6.5s execution
-│   ├── conftest.py                  # Shared fixtures
+├── tests/                            # 338 tests (163 unit + 10 E2E analytics), 6.5s execution
+│   ├── conftest.py                  # Shared fixtures (db_with_analytics_jobs fixture)
 │   ├── unit/
-│   │   ├── test-auth-middleware.py  # API key, JWT validation
-│   │   ├── test-auth-service.py     # Registration, login, password hashing
-│   │   ├── test-batch-service.py    # Batch creation, item tracking
-│   │   ├── test-confidence-scorer.py # Field aggregation
-│   │   ├── test-pipeline-config.py  # YAML parsing, validation
-│   │   ├── test-pipeline-executor.py # Step execution, error handling
-│   │   ├── test-schema-converter.py # CSV/JSON parsing
-│   │   ├── test-schema-models.py    # Pydantic validation
-│   │   ├── test-schema-validator.py # Field type checking
-│   │   ├── test-schema-versioning.py # Semver bump, compatibility
-│   │   ├── test-schema-migration.py # Version migration
-│   │   ├── test-router-service.py   # Provider selection
-│   │   ├── test-webhook-service.py  # Event registry, HMAC signing
-│   │   └── test-csv-prompt-builder.py # CSV→prompt conversion
+│   │   ├── test-auth-middleware.py          # API key, JWT validation
+│   │   ├── test-auth-service.py             # Registration, login, password hashing
+│   │   ├── test-batch-service.py            # Batch creation, item tracking
+│   │   ├── test-confidence-scorer.py        # Field aggregation
+│   │   ├── test-pipeline-config.py          # YAML parsing, validation
+│   │   ├── test-pipeline-executor.py        # Step execution, error handling
+│   │   ├── test-schema-converter.py         # CSV/JSON parsing
+│   │   ├── test-schema-models.py            # Pydantic validation
+│   │   ├── test-schema-validator.py         # Field type checking
+│   │   ├── test-schema-versioning.py        # Semver bump, compatibility
+│   │   ├── test-schema-migration.py         # Version migration
+│   │   ├── test-router-service.py           # Provider selection
+│   │   ├── test-webhook-service.py          # Event registry, HMAC signing
+│   │   ├── test-csv-prompt-builder.py       # CSV→prompt conversion
+│   │   └── test-analytics-service.py        # 15 unit tests (queries, SQLite fallback)
 │   ├── integration/
 │   │   └── (external service tests, conditionally skipped)
 │   └── e2e/
-│       ├── conftest.py              # E2E fixtures
-│       ├── test-auth-flow.py        # Register, login, API key generation
-│       ├── test-extract-flow.py     # Single extraction workflow
-│       ├── test-batch-flow.py       # Multi-file batch processing
-│       ├── test-pipeline-flow.py    # Pipeline creation, execution
-│       ├── test-webhook-flow.py     # Event registration, delivery
-│       ├── test-schema-crud.py      # Schema CRUD operations
-│       ├── test-schema-versioning-flow.py # Version management
-│       └── test-workspace-isolation.py # Multi-tenant enforcement
+│       ├── conftest.py                      # E2E fixtures
+│       ├── test-auth-flow.py                # Register, login, API key generation
+│       ├── test-extract-flow.py             # Single extraction workflow
+│       ├── test-batch-flow.py               # Multi-file batch processing
+│       ├── test-pipeline-flow.py            # Pipeline creation, execution
+│       ├── test-webhook-flow.py             # Event registration, delivery
+│       ├── test-schema-crud.py              # Schema CRUD operations
+│       ├── test-schema-versioning-flow.py   # Version management
+│       ├── test-workspace-isolation.py      # Multi-tenant enforcement
+│       └── test-analytics-endpoints.py      # 10 E2E tests (5 analytics endpoints)
 │
 ├── samples/                          # Example schemas (for testing/docs)
 │   └── schemas/
@@ -432,13 +441,13 @@ pending → processing → completed (if all succeeded)
 
 ## Testing Strategy
 
-### Test Coverage (~106 test functions, 28 test files, ~7.2s execution)
+### Test Coverage (~173 test functions, 30 test files, ~6.5s execution)
 
 | Category | Count | Purpose |
 |---|---|---|
-| **Unit** | 20 files | Validators, services, providers (no I/O, mocked) |
+| **Unit** | 21 files | Validators, services, providers, analytics (no I/O, mocked) |
 | **Integration** | 1 file | Placeholder for external service tests (skipped in CI) |
-| **E2E** | 8 files | Full workflows: auth, extraction, batch, pipeline, webhook, workspace |
+| **E2E** | 9 files | Full workflows: auth, extraction, batch, pipeline, webhook, workspace, analytics |
 
 ### Test Markers (pytest)
 ```python
@@ -449,7 +458,7 @@ pending → processing → completed (if all succeeded)
 
 ### Test Files Breakdown
 
-**Unit Tests (20 files):**
+**Unit Tests (21 files):**
 - `test-auth-middleware.py` — API key (SHA256), JWT (HS256) validation
 - `test-auth-service.py` — Registration, login, password hashing (bcrypt)
 - `test-batch-service.py` — Batch creation, status derivation, atomic counters
@@ -468,12 +477,13 @@ pending → processing → completed (if all succeeded)
 - `test-accuracy-service.py` — Metric computation, per-field breakdown
 - `test-template-service.py` — Template CRUD, seeding
 - `test-prompt-hint-builder.py` — Hint generation from corrections
+- `test-analytics-service.py` — Daily usage/cost queries, SQLite fallback, PG materialized view paths
 - 2 additional unit test files for edge cases/utilities
 
 **Integration Tests (1 file):**
 - Placeholder for external service tests (skipped in CI; require live Ollama/Gemini)
 
-**E2E Tests (8 files):**
+**E2E Tests (9 files):**
 - `test-auth-flow.py` — Register, login, API key generation, JWT refresh
 - `test-extract-flow.py` — Single extraction, status polling, result retrieval
 - `test-batch-flow.py` — Multi-file batch, status aggregation, cancellation
@@ -482,6 +492,7 @@ pending → processing → completed (if all succeeded)
 - `test-schema-crud.py` — Schema create/read/update/delete, versioning
 - `test-workspace-isolation.py` — Multi-tenant enforcement, workspace scoping
 - `test-review-flow.py` — HITL review, corrections, accuracy metrics
+- `test-analytics-endpoints.py` — 10 E2E tests covering /analytics/* endpoints (usage, costs, providers, overview, refresh)
 
 ## Data Flow Summary
 
@@ -638,17 +649,17 @@ EVENT_HEARTBEAT_INTERVAL=30
 
 | Metric | Value |
 |---|---|
-| **Backend Code** | ~7,300 LOC across 84 modules (src/) |
-| **Frontend Code** | ~2,800 LOC across 25 files (frontend/) |
-| **Test Code** | ~5,100 LOC across 28 files (tests/) |
-| **Total LOC** | ~15,200 |
+| **Backend Code** | ~7,500 LOC across 86 modules (src/) |
+| **Frontend Code** | ~2,600 LOC across 28 files (frontend/) |
+| **Test Code** | ~5,500 LOC across 30 files (tests/) |
+| **Total LOC** | ~15,600 |
 | **Database Tables** | 15 (SQLAlchemy ORM + alembic) |
-| **API Endpoints** | 45+ (auth, extract, batch, reviews, accuracy, templates, webhooks, ws) |
-| **Services** | 22 modules (auth, workspace, job, batch, review, accuracy, template, etc.) |
-| **Routers** | 14 (auth, extract, batch, jobs, reviews, accuracy, pipelines, schemas, templates, webhooks, websocket-events, workspaces, health) |
-| **Test Files** | 28 (20 unit + 1 integration + 8 e2e) |
-| **Test Functions** | ~106 |
-| **Test Execution** | ~7.2 seconds |
-| **Classes** | ~80+ (ORM models, services, providers, pipeline steps) |
-| **Async Functions** | ~95+ |
-| **Test Coverage** | 100% (services), 95%+ (pipelines), 90%+ (review, accuracy) |
+| **API Endpoints** | 50+ (auth, extract, batch, reviews, accuracy, analytics, templates, webhooks, ws) |
+| **Services** | 23 modules (auth, workspace, job, batch, review, accuracy, analytics, template, etc.) |
+| **Routers** | 15 (auth, extract, batch, jobs, reviews, accuracy, analytics, pipelines, schemas, templates, webhooks, websocket-events, workspaces, health) |
+| **Test Files** | 30 (21 unit + 1 integration + 9 e2e) |
+| **Test Functions** | ~173 |
+| **Test Execution** | ~6.5 seconds |
+| **Classes** | ~85+ (ORM models, services, providers, pipeline steps) |
+| **Async Functions** | ~100+ |
+| **Test Coverage** | 100% (services), 95%+ (pipelines), 90%+ (review, accuracy, analytics) |

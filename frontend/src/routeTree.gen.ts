@@ -18,6 +18,7 @@ import { Route as PipelinesRouteImport } from './routes/pipelines'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as BatchesRouteImport } from './routes/batches'
 import { Route as AccuracyRouteImport } from './routes/accuracy'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ReviewsJobIdRouteImport } from './routes/reviews_.$jobId'
 import { Route as JobsJobIdRouteImport } from './routes/jobs_.$jobId'
@@ -68,6 +69,11 @@ const AccuracyRoute = AccuracyRouteImport.update({
   path: '/accuracy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AnalyticsRoute = AnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -92,6 +98,7 @@ const BatchesBatchIdReviewRoute = BatchesBatchIdReviewRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accuracy': typeof AccuracyRoute
+  '/analytics': typeof AnalyticsRoute
   '/batches': typeof BatchesRoute
   '/jobs': typeof JobsRoute
   '/pipelines': typeof PipelinesRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accuracy': typeof AccuracyRoute
+  '/analytics': typeof AnalyticsRoute
   '/batches': typeof BatchesRoute
   '/jobs': typeof JobsRoute
   '/pipelines': typeof PipelinesRoute
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/accuracy': typeof AccuracyRoute
+  '/analytics': typeof AnalyticsRoute
   '/batches': typeof BatchesRoute
   '/jobs': typeof JobsRoute
   '/pipelines': typeof PipelinesRoute
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/accuracy'
+    | '/analytics'
     | '/batches'
     | '/jobs'
     | '/pipelines'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/accuracy'
+    | '/analytics'
     | '/batches'
     | '/jobs'
     | '/pipelines'
@@ -170,6 +181,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/accuracy'
+    | '/analytics'
     | '/batches'
     | '/jobs'
     | '/pipelines'
@@ -186,6 +198,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccuracyRoute: typeof AccuracyRoute
+  AnalyticsRoute: typeof AnalyticsRoute
   BatchesRoute: typeof BatchesRoute
   JobsRoute: typeof JobsRoute
   PipelinesRoute: typeof PipelinesRoute
@@ -264,6 +277,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccuracyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -298,6 +318,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccuracyRoute: AccuracyRoute,
+  AnalyticsRoute: AnalyticsRoute,
   BatchesRoute: BatchesRoute,
   JobsRoute: JobsRoute,
   PipelinesRoute: PipelinesRoute,

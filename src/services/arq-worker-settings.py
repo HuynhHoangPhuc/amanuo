@@ -3,6 +3,7 @@
 import importlib
 import logging
 
+from arq import cron
 from arq.connections import RedisSettings
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,13 @@ async def deliver_webhook_task(ctx: dict, delivery_id: str) -> dict:
     delivery_module = importlib.import_module("src.services.webhook-delivery")
     await delivery_module.deliver(delivery_id)
     return {"delivery_id": delivery_id, "status": "delivered"}
+
+
+async def refresh_analytics_views(ctx: dict) -> dict:
+    """ARQ cron: refresh PostgreSQL materialized views for analytics dashboard."""
+    analytics_svc = importlib.import_module("src.services.analytics-service")
+    await analytics_svc.refresh_views()
+    return {"status": "refreshed"}
 
 
 async def startup(ctx: dict) -> None:
@@ -52,6 +60,10 @@ class WorkerSettings:
     """ARQ worker configuration."""
 
     functions = [process_extraction_job, deliver_webhook_task]
+    cron_jobs = [
+        # Refresh analytics materialized views every 5 minutes
+        cron(refresh_analytics_views, minute=set(range(0, 60, 5))),
+    ]
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = get_redis_settings()

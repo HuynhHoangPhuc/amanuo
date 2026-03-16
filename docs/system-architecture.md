@@ -25,6 +25,7 @@
 │  │  Pipelines: /pipelines (YAML CRUD)                                   │ │
 │  │  Reviews: /reviews/{job_id}, GET /reviews (HITL corrections)         │ │
 │  │  Accuracy: /accuracy/{schema_id} (metrics + compute)                 │ │
+│  │  Analytics: /analytics/usage /costs /providers /overview; POST /refresh │ │
 │  │  Templates: /templates /templates/{id}/import /schemas/suggest       │ │
 │  │  WebSocket: /ws/events (Redis pub/sub, 30s heartbeat)                │ │
 │  │  Webhooks: /webhooks /webhooks/{id}/deliveries (retry backoff)       │ │
@@ -50,11 +51,12 @@
 │  │  Schema Service: Versioning, migration tracking, diff analysis      │   │
 │  │  Review Service: CRUD, correction diff, auto-review gating          │   │
 │  │  Accuracy Service: Compute metrics, cache, per-field breakdown      │   │
+│  │  Analytics Service: Daily usage/cost queries, materialized views    │   │
 │  │  Prompt Hint Builder: Aggregate corrections → hint generation       │   │
 │  │  Schema Suggest: VLM field suggestion, graceful degradation         │   │
 │  │  Template Service: Template CRUD, seeding, marketplace              │   │
 │  │  Redis Pool: ARQ connection pool singleton                          │   │
-│  │  ARQ Worker: Background job processor, async handlers               │   │
+│  │  ARQ Worker: Background job processor, async handlers, cron (5m)    │   │
 │  │  Event Broadcaster: Redis pub/sub for WebSocket events              │   │
 │  │  Router Service: Provider selection (local → cloud fallback)        │   │
 │  │  Extraction Worker: ARQ job enqueue, provider delegation, scoring   │   │
@@ -85,6 +87,8 @@
 │  │             schema_versions, pipelines, batches, batch_items,       │   │
 │  │             webhooks, webhook_deliveries, schema_templates,         │   │
 │  │             extraction_reviews, accuracy_metrics                    │   │
+│  │  Views (PG only): mv_daily_workspace_stats, mv_daily_provider_stats,│   │
+│  │                   mv_monthly_cost_summary (5min refresh)            │   │
 │  │  Queue: ARQ (Redis-backed job queue, in-memory fallback)            │   │
 │  │  Pub/Sub: Redis for WebSocket event broadcast                       │   │
 │  │  File Storage: Uploaded documents, batch items, extracted docs     │   │
@@ -106,6 +110,7 @@
 - **batch.py** — POST /extract/batch (multi-file), GET /batches, cancel operations
 - **pipelines.py** — CRUD for YAML-based pipelines, config validation
 - **schemas.py** — CRUD for schema templates, version history endpoint
+- **analytics.py** — GET /analytics/usage, /costs, /providers, /overview; POST /analytics/refresh
 - **webhooks.py** — Register webhooks, test delivery, view delivery logs
 - **workspaces.py** — Workspace CRUD, user isolation
 - **health.py** — Liveness check + provider availability
@@ -121,6 +126,7 @@
 - **router-service.py** — Provider selection logic (local vs cloud)
 - **extraction-worker.py** — Async worker pool, job dequeue, result scoring
 - **confidence-scorer.py** — Field-level confidence aggregation
+- **analytics-service.py** — Daily usage/cost/provider stats (SQLite queries + PG materialized view fallback)
 - **folder-watcher.py** — watchfiles-based batch aggregation (configurable window)
 
 ### Pipeline Engine (`src/engine/`)

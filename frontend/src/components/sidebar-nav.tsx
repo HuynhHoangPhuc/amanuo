@@ -12,10 +12,11 @@ import {
   LayoutGrid,
   ClipboardCheck,
   BarChart3,
+  TrendingUp,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/schemas', label: 'Schemas', icon: FileText },
   { to: '/templates', label: 'Templates', icon: LayoutGrid },
   { to: '/jobs', label: 'Jobs', icon: Briefcase },
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { to: '/pipelines', label: 'Pipelines', icon: GitBranch },
   { to: '/batches', label: 'Batches', icon: Layers },
   { to: '/accuracy', label: 'Accuracy', icon: BarChart3 },
+  { to: '/analytics', label: 'Analytics', icon: TrendingUp },
   { to: '/webhooks', label: 'Webhooks', icon: Webhook },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]

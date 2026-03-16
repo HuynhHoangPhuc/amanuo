@@ -226,6 +226,41 @@ export interface AccuracyMetric {
   field_accuracy: Record<string, FieldAccuracyDetail>
 }
 
+// Analytics types
+export interface DailyUsageStat {
+  date: string
+  job_count: number
+  success_count: number
+  failed_count: number
+  review_count: number
+  avg_confidence: number | null
+}
+
+export interface DailyCostStat {
+  date: string
+  total_cost_usd: number
+  total_input_tokens: number
+  total_output_tokens: number
+  provider_breakdown: Record<string, number>
+}
+
+export interface ProviderStat {
+  provider: string
+  job_count: number
+  success_rate: number
+  avg_confidence: number | null
+  avg_latency_ms: number | null
+  total_cost_usd: number
+}
+
+export interface AnalyticsOverview {
+  total_jobs: number
+  total_cost_usd: number
+  avg_confidence: number | null
+  active_schemas: number
+  period: string
+}
+
 // Auth types
 export interface LoginRequest {
   email: string

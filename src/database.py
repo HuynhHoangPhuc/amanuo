@@ -5,7 +5,9 @@ with existing test fixtures that use raw aiosqlite SQL.
 """
 
 import hashlib
+import importlib
 import secrets
+from datetime import datetime
 from typing import AsyncGenerator
 
 import aiosqlite
@@ -286,6 +288,66 @@ _INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_accuracy_schema ON accuracy_metrics(schema_id)",
     "CREATE INDEX IF NOT EXISTS idx_accuracy_workspace ON accuracy_metrics(workspace_id)",
 ]
+
+
+def is_sqlite(database_url: str) -> bool:
+    """Check if the database URL targets SQLite."""
+    return "sqlite" in database_url
+
+
+async def init_db_postgres() -> None:
+    """Initialize PostgreSQL: create all tables via ORM metadata, then seed defaults."""
+    from src.models.base import Base
+    import src.models.workspace  # noqa: F401
+    import src.models.pipeline  # noqa: F401
+    import src.models.webhook  # noqa: F401
+    import src.models.batch  # noqa: F401
+    import src.models.job  # noqa: F401
+    importlib.import_module("src.models.schema-orm")
+    importlib.import_module("src.models.schema-template")
+    importlib.import_module("src.models.extraction-review")
+    importlib.import_module("src.models.accuracy-metric")
+
+    async with _engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    await _seed_postgres_defaults()
+
+
+async def _seed_postgres_defaults() -> None:
+    """Seed default workspace and API key for PostgreSQL databases."""
+    from sqlalchemy import select
+    from src.models.workspace import WorkspaceORM, ApiKeyORM
+
+    async with _async_session_factory() as session:
+        now = datetime.utcnow().isoformat()
+
+        result = await session.execute(select(WorkspaceORM).where(WorkspaceORM.id == "default"))
+        if not result.scalar_one_or_none():
+            session.add(WorkspaceORM(id="default", name="Default Workspace", created_at=now, updated_at=now))
+            await session.flush()
+
+        result = await session.execute(
+            select(ApiKeyORM).where(ApiKeyORM.workspace_id == "default", ApiKeyORM.name == "Default Key")
+        )
+        if not result.scalar_one_or_none():
+            raw_key = secrets.token_urlsafe(32)
+            key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+            session.add(ApiKeyORM(
+                id="default-key",
+                workspace_id="default",
+                name="Default Key",
+                key_hash=key_hash,
+                key_prefix=raw_key[:8],
+                is_active=1,
+                created_at=now,
+            ))
+            print(f"\n{'='*60}")
+            print(f"  DEFAULT API KEY (shown once): {raw_key}")
+            print(f"  Prefix: {raw_key[:8]}")
+            print(f"{'='*60}\n")
+
+        await session.commit()
 
 
 def get_db_path(database_url: str) -> str:

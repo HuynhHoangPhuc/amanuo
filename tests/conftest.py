@@ -125,3 +125,65 @@ async def db_workspace():
         await db.close()
 
     return workspace_id
+
+
+@pytest.fixture
+async def db_with_analytics_jobs():
+    """Create a workspace with API key + 24 varied jobs for analytics testing."""
+    import uuid
+    import hashlib
+    import secrets
+    from datetime import datetime, timedelta
+
+    workspace_id = str(uuid.uuid4())
+    raw_key = secrets.token_urlsafe(32)
+    key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+    key_id = str(uuid.uuid4())
+    now = datetime.now()
+
+    db = await get_connection(get_db_path(settings.database_url))
+    try:
+        now_iso = now.isoformat()
+        await db.execute(
+            "INSERT INTO workspaces (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
+            (workspace_id, f"analytics-ws-{workspace_id[:8]}", now_iso, now_iso),
+        )
+        await db.execute(
+            """INSERT INTO api_keys (id, workspace_id, name, key_hash, key_prefix, created_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (key_id, workspace_id, "analytics-key", key_hash, raw_key[:8], now_iso),
+        )
+
+        # Insert 24 jobs with varied provider, status, cost, and date spread
+        providers = ["gemini", "mistral", None]
+        statuses = ["completed", "failed", "pending_review"]
+        costs = [0.001, 0.01, 0.05, 0.0]
+
+        for i in range(24):
+            job_id = str(uuid.uuid4())
+            provider = providers[i % 3]
+            mode = "cloud" if provider else "local_only"
+            status = statuses[i % 3]
+            cost = costs[i % 4]
+            job_date = (now - timedelta(days=i % 20)).isoformat()
+            completed_at = (now - timedelta(days=i % 20, seconds=30)).isoformat() if status == "completed" else None
+            confidence = 0.85 + (i % 10) * 0.01 if status == "completed" else None
+
+            await db.execute(
+                """INSERT INTO jobs (
+                    id, workspace_id, status, mode, cloud_provider,
+                    cost_estimated_usd, cost_input_tokens, cost_output_tokens,
+                    confidence, created_at, completed_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    job_id, workspace_id, status, mode, provider,
+                    cost, int(cost * 10000), int(cost * 5000),
+                    confidence, job_date, completed_at,
+                ),
+            )
+
+        await db.commit()
+    finally:
+        await db.close()
+
+    return workspace_id, raw_key

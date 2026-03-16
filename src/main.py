@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import settings
-from src.database import create_engine_from_url, get_db_path, get_engine, init_db
+from src.database import create_engine_from_url, get_db_path, get_engine, init_db, init_db_postgres, is_sqlite
 from src.routers import health
 from src.routers.extract import router as extract_router
 from src.routers.jobs import router as jobs_router
@@ -48,6 +48,7 @@ _event_broadcaster = importlib.import_module("src.services.event-broadcaster")
 _ws_events_router = importlib.import_module("src.routers.websocket-events")
 _reviews_router = importlib.import_module("src.routers.reviews")
 _accuracy_router = importlib.import_module("src.routers.accuracy")
+_analytics_router = importlib.import_module("src.routers.analytics")
 
 
 @asynccontextmanager
@@ -58,9 +59,12 @@ async def lifespan(app: FastAPI):
     # 1. Initialise SQLAlchemy engine (must happen before any service calls)
     create_engine_from_url(settings.database_url)
 
-    # 2. Run raw-SQL migrations (creates tables + seeds default workspace/key)
-    db_path = get_db_path(settings.database_url)
-    await init_db(db_path)
+    # 2. Run migrations and seed default data (dialect-aware)
+    if is_sqlite(settings.database_url):
+        db_path = get_db_path(settings.database_url)
+        await init_db(db_path)
+    else:
+        await init_db_postgres()
     Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
 
     # 3. Connect to Redis for ARQ job queue (graceful degradation if unavailable)
@@ -173,6 +177,7 @@ app.include_router(_templates_router.router)
 app.include_router(_ws_events_router.router)
 app.include_router(_reviews_router.router)
 app.include_router(_accuracy_router.router)
+app.include_router(_analytics_router.router)
 
 try:
     import gradio as gr

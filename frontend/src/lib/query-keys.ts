@@ -41,6 +41,13 @@ export const queryKeys = {
     schema: (schemaId: string) => ['accuracy', schemaId] as const,
     fields: (schemaId: string) => ['accuracy', schemaId, 'fields'] as const,
   },
+  analytics: {
+    all: () => ['analytics'] as const,
+    overview: (period: string) => ['analytics', 'overview', period] as const,
+    usage: (period: string) => ['analytics', 'usage', period] as const,
+    costs: (period: string) => ['analytics', 'costs', period] as const,
+    providers: (period: string) => ['analytics', 'providers', period] as const,
+  },
   templates: {
     all: () => ['templates'] as const,
     list: (category?: string, lang?: string, search?: string) =>
