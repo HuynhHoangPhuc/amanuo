@@ -103,7 +103,8 @@ function BatchesPage() {
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.batches.list(),
     queryFn: () => api.get<BatchListResponse>('/batches'),
-    refetchInterval: 5000,
+    // WS events drive most updates; fallback poll every 30s for non-WS clients
+    refetchInterval: 30_000,
   })
 
   const batches = data?.batches ?? []
