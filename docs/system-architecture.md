@@ -3,105 +3,177 @@
 ## High-Level Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                         FastAPI Application                      │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌────────────────────────────────────────────────────────────┐ │
-│  │                  API Layer (Routers)                       │ │
-│  │  /extract  /jobs  /schemas  /health  + Gradio UI         │ │
-│  └────────────────────┬─────────────────────────────────────┘ │
-│                       │                                        │
-│  ┌────────────────────▼─────────────────────────────────────┐ │
-│  │              Services Layer                              │ │
-│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐ │ │
-│  │  │ Job Service  │ │Router Service│ │Confidence Scorer │ │ │
-│  │  │(Persistence) │ │ (Selection)  │ │  (Aggregation)   │ │ │
-│  │  └──────────────┘ └──────────────┘ └──────────────────┘ │ │
-│  │                                                          │ │
-│  │  ┌──────────────────────────────────────────────────┐  │ │
-│  │  │      Extraction Worker (Async Queue)             │  │ │
-│  │  │  • Dequeue job • Select provider • Score result  │  │ │
-│  │  └──────────────────────────────────────────────────┘  │ │
-│  └────────────────────────────────────────────────────────┘ │
-│                       │                                      │
-│  ┌────────────────────▼─────────────────────────────────┐  │
-│  │         Extraction Pipelines (Providers)              │  │
-│  │                                                       │  │
-│  │  ┌──────────────────┐    ┌──────────────────────┐  │  │
-│  │  │  Cloud Pipeline  │    │   Local Pipeline     │  │  │
-│  │  │                  │    │                      │  │  │
-│  │  │ • Gemini API     │    │ • Ollama/vLLM VLM    │  │  │
-│  │  │ • Mistral API    │    │ • PaddleOCR Fallback │  │  │
-│  │  └──────────────────┘    └──────────────────────┘  │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                       │                                      │
-│  ┌────────────────────▼─────────────────────────────────┐  │
-│  │   Data Access Layer                                  │  │
-│  │  ┌──────────────────────────────────────────────┐   │  │
-│  │  │  SQLite Database (jobs, schemas, results)    │   │  │
-│  │  │  File Storage (uploaded images)              │   │  │
-│  │  │  Schema Store (templates + validation)       │   │  │
-│  │  └──────────────────────────────────────────────┘   │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                                                              │
-└──────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     FastAPI Backend + React Frontend                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Frontend (React 19, TanStack Router/Query, Tailwind CSS v4)                │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  Pages: Dashboard │ Schemas │ Jobs │ Batches │ Pipelines │ Webhooks   │ │
+│  │  Components: Headers, Sidebars, Forms, Result Viewers, Modals        │ │
+│  │  API Client: X-API-Key auth, TanStack Query caching                  │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                            ↓ HTTP/REST (port 3000→8000)                     │
+│                                                                              │
+│  API Layer (39 Endpoints)                                                   │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  Auth: /auth/register /auth/login /auth/logout                        │ │
+│  │  Keys: /api-keys (CRUD, SHA256 hash)                                  │ │
+│  │  Workspaces: /workspaces (CRUD, soft multi-tenancy)                  │ │
+│  │  Extraction: /extract /jobs /schemas /schemas/{id}/versions          │ │
+│  │  Batch: /extract/batch /batches /batches/{id}/cancel                 │ │
+│  │  Pipelines: /pipelines (YAML config CRUD)                            │ │
+│  │  Webhooks: /webhooks /webhooks/{id}/deliveries (retry backoff)       │ │
+│  │  Health: /health (liveness + provider availability)                   │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                  ↓                                           │
+│  Middleware Layer                                                            │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  Auth Middleware: Validate X-API-Key (SHA256) → workspace scoping     │ │
+│  │  JWT Middleware: Validate HS256 token (HS256, 15min / 7d refresh)     │ │
+│  │  Error Handler: Structured error responses, exception logging         │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                  ↓                                           │
+│  Services Layer (Business Logic)                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  Auth Service: Register, login, JWT/API key generation, validation  │   │
+│  │  Workspace Service: CRUD, isolation, default workspace mgmt         │   │
+│  │  Job Service: Status tracking, result persistence, cost agg         │   │
+│  │  Batch Service: Multi-file upload, status derivation, cancellation  │   │
+│  │  Pipeline Service: YAML parsing, executor delegation, step registry │   │
+│  │  Webhook Service: Event registry, HMAC-SHA256 signing, delivery     │   │
+│  │  Webhook Delivery: Async queue, retry backoff [60s, 5m, 30m, 2h]   │   │
+│  │  Schema Service: Versioning, migration tracking, diff analysis      │   │
+│  │  Router Service: Provider selection (local → cloud fallback)        │   │
+│  │  Extraction Worker: Job dequeue, provider delegation, scoring       │   │
+│  │  Folder Watcher: watchfiles-based batch aggregation (60s window)    │   │
+│  │  Confidence Scorer: Field-level aggregation                         │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                  ↓                                           │
+│  Pipeline Engine Layer (Step-Based)                                          │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  Pipeline Executor: Sequential step execution with timing/errors    │   │
+│  │  Step Registry: preprocess, extract, validate, export               │   │
+│  │  StepContext: Data carrier between steps, error propagation         │   │
+│  │  Config Parser: YAML → PipelineConfig (stored in DB)               │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                  ↓                                           │
+│  Extraction Pipelines (Provider Interface)                                   │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  Cloud Providers: Gemini API, Mistral API (cost tracking)           │   │
+│  │  Local Provider: Ollama, vLLM, llama.cpp (multi-backend fallback)   │   │
+│  │  Fallback: PaddleOCR for text-only extraction                       │   │
+│  │  Base Provider: Abstract interface (extract, is_available, cost)    │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                  ↓                                           │
+│  Data Layer                                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  Database: SQLite (11 tables: users, workspaces, jobs, batches,    │   │
+│  │            pipelines, webhooks, deliveries, schemas, versions, etc) │   │
+│  │  File Storage: Uploaded documents, batch items                     │   │
+│  │  Cache: In-memory schema templates, provider availability          │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Component Responsibilities
 
+### Middleware (`src/middleware/`)
+- **auth-middleware.py** — API key (SHA256 hash) validation, JWT token verification, workspace scoping
+
 ### API Layer (`src/routers/`)
-- **extract.py** — POST /extract (file + schema) → job creation, validation
-- **jobs.py** — GET /jobs, /jobs/{id}, poll status & retrieve results
-- **schemas.py** — CRUD operations for schema templates
-- **health.py** — GET /health liveness/readiness check
+- **auth.py** — POST /auth/register, /login, /logout (JWT, refresh tokens)
+- **extract.py** — POST /extract (single file), validation, job creation
+- **jobs.py** — GET /jobs, /jobs/{id}, status polling, result retrieval
+- **batch.py** — POST /extract/batch (multi-file), GET /batches, cancel operations
+- **pipelines.py** — CRUD for YAML-based pipelines, config validation
+- **schemas.py** — CRUD for schema templates, version history endpoint
+- **webhooks.py** — Register webhooks, test delivery, view delivery logs
+- **workspaces.py** — Workspace CRUD, user isolation
+- **health.py** — Liveness check + provider availability
 
 ### Services Layer (`src/services/`)
+- **auth-service.py** — User registration/login, password hashing (bcrypt), JWT generation
+- **workspace-service.py** — Workspace CRUD, soft multi-tenancy enforcement
 - **job-service.py** — Job CRUD, persistence, status transitions
+- **batch-service.py** — Batch creation, atomic counter updates, status derivation
+- **pipeline-service.py** — Pipeline CRUD, executor delegation
+- **webhook-service.py** — Event registration, HMAC-SHA256 signing
+- **webhook-delivery.py** — Async delivery queue, retry backoff scheduler
 - **router-service.py** — Provider selection logic (local vs cloud)
 - **extraction-worker.py** — Async worker pool, job dequeue, result scoring
-- **confidence-scorer.py** — Aggregate confidence metrics
+- **confidence-scorer.py** — Field-level confidence aggregation
+- **folder-watcher.py** — watchfiles-based batch aggregation (configurable window)
+
+### Pipeline Engine (`src/engine/`)
+- **pipeline-executor.py** — Sequential step execution, timing, error handling
+- **pipeline-config.py** — YAML parser, config validation
+- **step-registry.py** — Step type registry (preprocess, extract, validate, export)
+- **step-interface.py** — Abstract StepContext, step execution protocol
 
 ### Schema Engine (`src/schemas/`)
-- **schema-models.py** — Data structures (SchemaField, ExtractionSchema, ExtractionResult)
-- **schema-validator.py** — Field validation, type checking
+- **schema-models.py** — Pydantic models (SchemaField, ExtractionSchema, ExtractionResult)
+- **schema-validator.py** — Field validation, type checking, occurrence rules
 - **schema-converter.py** — JSON/CSV parsing and normalization
-- **schema-store.py** — Template persistence and seeding
+- **schema-store.py** — Template persistence, in-memory caching
+- **schema-versioning.py** — Semver auto-bump, compatibility checks, field diff analysis
+- **schema-migration.py** — Version migration tracking, backward compatibility
 
 ### Extraction Pipelines (`src/pipelines/`)
 - **base-provider.py** — Abstract interface (extract, is_available, get_cost_info)
-- **cloud/** — Gemini & Mistral API integrations with cost tracking
-- **local/** — Ollama/vLLM/llama.cpp VLM + PaddleOCR fallback
+- **cloud/gemini-provider.py** — Gemini API integration with cost tracking
+- **cloud/mistral-provider.py** — Mistral API integration with cost tracking
+- **cloud/cloud-utils.py** — Token counting, prompt optimization
+- **local/local-provider.py** — VLM orchestrator, multi-backend fallback
+- **local/ollama-backend.py** — Ollama API calls
+- **local/vllm-backend.py** — vLLM API calls
+- **local/llamacpp-backend.py** — llama.cpp API calls
+- **local/vlm-prompt-builder.py** — Schema → VLM prompt conversion
+- **local/paddleocr-fallback.py** — Text-only extraction fallback
 
 ### Models (`src/models/`)
-- **api-models.py** — Pydantic request/response schemas (ExtractionRequest, JobResponse, etc.)
-- **job.py** — Job ORM model for SQLite persistence
+- **api-models.py** — Pydantic request/response schemas
+- **job.py** — Job ORM model for SQLite
+- **batch.py** — Batch ORM model, item tracking
+- **pipeline.py** — Pipeline ORM model, YAML config storage
+- **webhook.py** — Webhook ORM model, event types
+- **workspace.py** — Workspace ORM model, user association
+
+### Frontend (`frontend/src/`)
+- **routes/**.tsx — Page components (file-based TanStack Router)
+- **components/** — Reusable UI components (Header, Sidebar, Forms, Modals)
+- **lib/api-client.ts** — HTTP client with X-API-Key authentication
+- **lib/query-keys.ts** — TanStack Query key factories
+- **lib/types.ts** — TypeScript type definitions
 
 ### UI (`src/ui/`)
-- **gradio-app.py** — Web interface for interactive extraction
+- **gradio-app.py** — Optional web interface for interactive extraction
 - **ui-helpers.py** — Form builders and UI utilities
 
-## Data Flow: Single Extraction Request
+## Data Flows
 
+### Single Extraction Request
 ```
-1. Client sends multipart form (image + mode + schema) to POST /extract
-2. validate_or_raise() checks schema syntax
-3. Job created in SQLite with status="pending"
-4. Job ID returned (202 Accepted)
-5. Client polls GET /jobs/{job_id}
+1. Client calls POST /extract with X-API-Key header
+2. Auth middleware extracts workspace_id from API key hash
+3. API validates schema syntax, file size
+4. Job created in DB with status="pending", workspace_id set
+5. Job ID returned (202 Accepted)
+6. Client polls GET /jobs/{job_id}
 
-Background Processing:
-6. extraction-worker dequeues job
-7. router-service selects provider:
+Background (extraction-worker):
+7. Dequeue job (workspace-scoped)
+8. Router selects provider:
    - mode="local_only" → LocalProvider
-   - mode="cloud" → CloudProvider (default Gemini)
+   - mode="cloud" → CloudProvider (Gemini or Mistral)
    - mode="auto" → Try local first, fallback to cloud on low confidence
-8. selected_provider.extract(image, schema) → PipelineResult
-9. confidence-scorer aggregates field-level confidence scores
-10. Job marked complete with result + cost + confidence
-11. Client polls and receives full result
+9. Provider executes extraction
+10. Confidence scorer aggregates field-level scores
+11. Job marked complete with result + cost + workspace_id
+12. Client polls and receives full result
 
-Result stored schema:
+Result format:
 {
   label_name: str,
   value: str | [str],
@@ -110,65 +182,301 @@ Result stored schema:
 }
 ```
 
-## Database Schema
+### Batch Processing Flow
+```
+1. Client calls POST /extract/batch with multiple files, X-API-Key
+2. Auth middleware: workspace_id extracted
+3. Batch created in DB with status="pending", total_items count
+4. Batch ID returned (202 Accepted)
+5. Folder watcher (watchfiles) monitors upload directory
+6. After batch_window_seconds (default 60s), trigger batch processing
+7. For each file:
+   - Create job in DB (batch_id FK)
+   - extraction-worker dequeues
+   - Extract → score → store result
+   - Increment processed_items counter atomically
+8. Status derivation:
+   - All succeeded → "completed"
+   - Some failed → "partial"
+   - All failed → "failed"
+9. Webhook event triggered (batch.completed or batch.failed)
+10. Client polls GET /batches/{id} to see progress
+```
 
-### `jobs` table
+### Pipeline Execution Flow
+```
+1. User creates pipeline: POST /pipelines
+   - YAML config stored in DB
+   - Name, steps (preprocess, extract, validate, export)
+2. User submits extraction: POST /extract with pipeline_id
+3. Pipeline executor retrieved from registry
+4. For each step:
+   - Step executor retrieved from registry
+   - StepContext passed through (image, schema, errors)
+   - If error: stop pipeline, return error
+   - Record timing per step
+5. Final result stored in job
+```
+
+### Webhook Event Flow
+```
+1. Job/batch completes
+2. Webhook service queries active webhooks for workspace
+3. For each webhook:
+   - Filter by event_type (job.completed, batch.failed, etc.)
+   - Create payload JSON
+   - Sign with HMAC-SHA256 (secret + payload)
+   - Create webhook_delivery record (pending)
+4. Async delivery worker:
+   - Send HTTP POST to webhook.url
+   - Include X-Amanuo-Signature header
+   - If 2xx: mark delivered
+   - If error: schedule retry at next backoff interval [60s, 5m, 30m, 2h]
+5. Webhook subscription receiver verifies signature, processes event
+```
+
+### Authentication Flow (API Key)
+```
+1. User calls POST /api-keys with JWT token
+2. Auth service generates raw key: "amanuo_pk_{random}"
+3. Hash with SHA256 (raw key NEVER stored)
+4. Store key_hash in DB, workspace_id FK
+5. Return key to user (once only)
+6. Client uses X-API-Key header for subsequent requests
+7. Auth middleware:
+   - Extract X-API-Key value
+   - Query DB for key_hash = SHA256(X-API-Key)
+   - If found: extract workspace_id, inject into request context
+   - If not found: 401 Unauthorized
+8. All queries automatically filtered by workspace_id
+```
+
+### Schema Versioning Flow
+```
+1. User creates schema v1.0.0
+2. User updates schema (e.g., new field, type change)
+3. Schema versioning service detects changes:
+   - Removed field or type change → major version bump (2.0.0)
+   - New field added → minor version bump (1.1.0)
+   - Prompt/config change only → patch version bump (1.0.1)
+4. New schema_version record created in DB
+5. Backward compatibility check:
+   - Can old jobs still use new schema? Yes if only fields added
+6. User can rollback to previous version or use specific version for jobs
+7. Version history accessible via GET /schemas/{id}/versions
+```
+
+## Database Schema (11 Tables)
+
+### Authentication & Workspaces
 ```sql
+-- Users
+CREATE TABLE users (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT FOREIGN KEY,
+  email TEXT UNIQUE,
+  password_hash TEXT,
+  created_at TEXT,
+  INDEX(workspace_id)
+);
+
+-- Workspaces
+CREATE TABLE workspaces (
+  id TEXT PRIMARY KEY,
+  name TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TEXT
+);
+
+-- API Keys
+CREATE TABLE api_keys (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT FOREIGN KEY,
+  key_hash TEXT UNIQUE,  -- SHA256 hash
+  name TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TEXT,
+  INDEX(workspace_id),
+  INDEX(key_hash)
+);
+```
+
+### Extraction & Jobs
+```sql
+-- Jobs
 CREATE TABLE jobs (
   id TEXT PRIMARY KEY,
+  workspace_id TEXT FOREIGN KEY,
   status TEXT CHECK(status IN ('pending', 'processing', 'completed', 'failed')),
   mode TEXT,
-  cloud_provider TEXT,
+  pipeline_id TEXT,
   input_file TEXT,
-  schema_fields TEXT,  -- JSON array
-  result TEXT,  -- JSON array of ExtractionResult
+  schema_id TEXT,
+  result TEXT,  -- JSON array
   confidence REAL,
   cost_input_tokens INTEGER,
   cost_output_tokens INTEGER,
   cost_usd REAL,
   error TEXT,
   created_at TEXT,
-  completed_at TEXT
+  completed_at TEXT,
+  INDEX(workspace_id),
+  INDEX(status),
+  INDEX(created_at)
+);
+
+-- Schemas
+CREATE TABLE schemas (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT FOREIGN KEY,
+  name TEXT,
+  fields TEXT,  -- JSON array
+  is_template BOOLEAN,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TEXT,
+  INDEX(workspace_id),
+  INDEX(is_template)
+);
+
+-- Schema Versions
+CREATE TABLE schema_versions (
+  id TEXT PRIMARY KEY,
+  schema_id TEXT FOREIGN KEY,
+  version TEXT,  -- Semver: major.minor.patch
+  fields TEXT,  -- JSON array
+  change_type TEXT,  -- major, minor, patch
+  breaking_changes TEXT,  -- JSON
+  created_at TEXT,
+  INDEX(schema_id),
+  INDEX(version)
 );
 ```
 
-### `schemas` table
+### Batch Processing
 ```sql
-CREATE TABLE schemas (
+-- Batches
+CREATE TABLE batches (
   id TEXT PRIMARY KEY,
+  workspace_id TEXT FOREIGN KEY,
+  status TEXT CHECK(status IN ('pending', 'processing', 'completed', 'partial', 'failed')),
+  pipeline_id TEXT,
+  total_items INTEGER,
+  processed_items INTEGER,
+  failed_items INTEGER,
+  created_at TEXT,
+  completed_at TEXT,
+  INDEX(workspace_id),
+  INDEX(status)
+);
+
+-- Batch Items
+CREATE TABLE batch_items (
+  id TEXT PRIMARY KEY,
+  batch_id TEXT FOREIGN KEY,
+  job_id TEXT FOREIGN KEY,
+  file_path TEXT,
+  status TEXT CHECK(status IN ('pending', 'processing', 'completed', 'failed')),
+  INDEX(batch_id),
+  INDEX(job_id)
+);
+```
+
+### Pipelines & Webhooks
+```sql
+-- Pipelines
+CREATE TABLE pipelines (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT FOREIGN KEY,
   name TEXT,
-  fields TEXT,  -- JSON array of SchemaField
-  is_template BOOLEAN,
-  created_at TEXT
+  config TEXT,  -- YAML as JSON
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TEXT,
+  INDEX(workspace_id)
+);
+
+-- Webhooks
+CREATE TABLE webhooks (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT FOREIGN KEY,
+  url TEXT,
+  event_types TEXT,  -- JSON array
+  secret TEXT,  -- For HMAC-SHA256 signing
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TEXT,
+  INDEX(workspace_id)
+);
+
+-- Webhook Deliveries
+CREATE TABLE webhook_deliveries (
+  id TEXT PRIMARY KEY,
+  webhook_id TEXT FOREIGN KEY,
+  event_type TEXT,
+  payload TEXT,  -- JSON
+  status TEXT CHECK(status IN ('pending', 'delivered', 'failed')),
+  attempt INTEGER DEFAULT 0,
+  next_retry_at TEXT,
+  response_status INTEGER,
+  response_body TEXT,
+  created_at TEXT,
+  INDEX(webhook_id),
+  INDEX(status),
+  INDEX(next_retry_at)
 );
 ```
 
 ## Technology Stack
 
+### Backend
 | Component | Technology | Purpose |
 |---|---|---|
-| **Web Framework** | FastAPI 0.115+ | REST API server |
-| **Async Runtime** | asyncio | Job queue, concurrent workers |
-| **Database** | SQLite + aiosqlite | Lightweight persistence |
-| **Cloud VLM** | google-genai (Gemini), mistralai (Mistral) | Structured extraction with cost tracking |
-| **Local VLM** | Ollama/vLLM/llama.cpp | Privacy-preserving inference |
-| **OCR Fallback** | PaddleOCR | Text extraction when VLM unavailable |
-| **Web UI** | Gradio 5.0+ | Interactive extraction interface |
+| **Web Framework** | FastAPI 0.115+ | REST API server, async middleware |
+| **Async Runtime** | asyncio | Job queue, worker pool, webhooks |
+| **Database** | SQLite + aiosqlite | Persistence (dev/small); PostgreSQL-compatible |
+| **Authentication** | PyJWT, bcrypt | JWT tokens (HS256), password hashing (rounds=12) |
 | **Config** | pydantic-settings | Environment-driven settings |
+| **YAML** | PyYAML | Pipeline configuration parsing |
+| **File Watcher** | watchfiles | Batch aggregation (folder monitoring) |
+| **Cloud VLM** | google-genai, mistralai | Structured extraction + cost tracking |
+| **Local VLM** | Ollama, vLLM, llama.cpp | Privacy-preserving inference |
+| **OCR Fallback** | PaddleOCR | Text extraction fallback |
+| **HTTP Client** | httpx | Async HTTP requests (webhooks, providers) |
+
+### Frontend
+| Component | Technology | Purpose |
+|---|---|---|
+| **Framework** | React 19.0+ | UI library |
+| **Router** | TanStack Router | File-based, type-safe routing |
+| **State Mgmt** | TanStack Query | Async state, caching, refetching |
+| **Styling** | Tailwind CSS 4.0+ | Utility-first CSS framework |
+| **Build Tool** | Vite 7.0+ | Fast dev server, optimized builds |
+| **Language** | TypeScript 5.0+ | Type safety |
+| **HTTP Client** | Fetch API + wrapper | X-API-Key authentication |
 
 ## Module Dependencies
 
 ```
 main.py
-  ├── routers/ (extract, jobs, schemas, health)
-  │   ├── services/ (job-service, router-service, extraction-worker)
-  │   │   ├── pipelines/ (base, cloud, local)
-  │   │   │   └── models/ (api-models, job)
-  │   │   └── schemas/ (schema-models, validator, converter, store)
-  │   └── schemas/
-  ├── database.py (SQLite connection & init)
+  ├── middleware/
+  │   └── auth-middleware.py
+  ├── routers/
+  │   ├── auth.py
+  │   ├── extract.py, batch.py, jobs.py
+  │   ├── pipelines.py, schemas.py, webhooks.py
+  │   ├── workspaces.py, health.py
+  │   └── services/ (job, batch, workspace, pipeline, webhook, auth, extraction-worker, etc.)
+  │       ├── pipelines/ (base, cloud, local)
+  │       ├── schemas/ (models, validator, converter, store, versioning, migration)
+  │       └── engine/ (executor, config, registry, step-interface)
+  ├── models/ (api-models, job, batch, pipeline, webhook, workspace)
+  ├── database.py (SQLite schema + init)
   ├── config.py (Settings)
-  └── ui/gradio-app.py (optional UI mount)
+  └── ui/gradio-app.py (optional)
+
+frontend/
+  ├── routes/ (file-based TanStack Router)
+  ├── components/ (React components)
+  ├── lib/ (api-client.ts, query-keys.ts, types.ts)
+  └── main.tsx (React entry point)
 ```
 
 ## Provider Selection Strategy

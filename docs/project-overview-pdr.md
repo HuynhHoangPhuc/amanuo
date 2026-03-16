@@ -11,74 +11,130 @@ Amanuo is an adaptive hybrid OCR system for **structured document extraction** a
 3. **Cost-Efficiency** — Minimize token usage via schema-driven extraction; support multiple cloud providers
 4. **Developer Experience** — Clear REST API, batch job processing, persistent schema templates
 
-## Scope (MVP)
+## Scope (Phase 1 Platform Evolution)
 
 ### In-Scope
-- Single-document extraction with user-provided schemas (JSON/CSV formats)
-- Schema validation and template management
-- Dual-pipeline extraction: local VLM (Ollama/vLLM/llama.cpp + PaddleOCR) & cloud (Gemini/Mistral)
-- Adaptive routing: local-only, cloud-only, or auto-select based on confidence
-- Async job queue with SQLite persistence
-- Cost tracking and confidence scoring
-- Gradio web UI for interactive extraction
-- 67 unit + E2E tests with 100% core module coverage
+**Multi-Workspace Platform**
+- Soft multi-tenancy via workspace_id FK in all tables
+- User registration/login with bcrypt (12 rounds) + JWT (HS256, 15min access / 7d refresh)
+- API key authentication (SHA256 hash, stateless, X-API-Key header)
+- Workspace CRUD with default workspace protection
 
-### Out-of-Scope
-- Multi-document batching
+**Batch Processing**
+- Multi-file upload via POST /extract/batch (202 Accepted)
+- Atomic counter updates, status derivation (pending→processing→completed/partial/failed)
+- Batch cancellation, folder watcher (watchfiles-based, configurable batch window)
+
+**Pipeline Engine**
+- YAML-based configuration stored in database
+- StepContext dataclass + PipelineStep ABC interface
+- Sequential executor with per-step timing & error handling
+- Step registry: preprocess, extract, validate, export
+- Default pipeline emulates MVP behavior
+
+**Webhook System**
+- Event registration (job.completed, job.failed, batch.completed, batch.failed)
+- HMAC-SHA256 payload signing
+- Async delivery queue with retry backoff: [60s, 5m, 30m, 2h]
+- Test delivery endpoint, delivery log viewer
+
+**Schema Versioning**
+- Semver auto-bump: breaking changes → major, new fields → minor, prompt changes → patch
+- Backward compatibility checks, field diff analysis
+- Version history endpoint, schema migration tracking
+
+**Frontend (TanStack)**
+- React 19 + TanStack Router (file-based) + TanStack Query + Tailwind CSS v4
+- Pages: Dashboard, Schemas, Jobs, Pipelines, Batches, Webhooks, Settings
+- API client with X-API-Key auth, toast notifications
+- Build: 1831 modules, 17 chunks, 0 errors
+
+**Testing**
+- 204 tests (148 unit + 56 E2E), 6.5s execution
+- Coverage: auth, batch, pipeline, webhook, workspace, schema versioning
+
+### Out-of-Scope (Phase 2+)
 - Fine-tuning or model training
-- Real-time streaming
-- OAuth authentication
+- Real-time streaming (WebSockets)
+- OAuth / social authentication
+- Advanced analytics & cost breakdowns
 
 ## Functional Requirements
 
 | Requirement | Detail |
 |---|---|
-| **Schema Definition** | Accept JSON schema or CSV import; validate field types (text, number, date, currency, checkbox, address) |
-| **Image Processing** | Support PNG, JPEG, TIFF, PDF (up to 20MB) |
+| **Authentication** | User registration/login (JWT), API key generation (SHA256 hash), X-API-Key header validation |
+| **Multi-Tenancy** | Workspace isolation, all queries filtered by workspace_id, soft deletion for data |
+| **Batch Processing** | Multi-file upload, atomic status tracking, batch cancellation, folder watching |
+| **Pipelines** | YAML config parsing, step-based executor, default pipeline for MVP behavior |
+| **Webhooks** | Event subscription (job.*, batch.*), HMAC-SHA256 signing, retry backoff [60s, 5m, 30m, 2h] |
+| **Schema Versioning** | Auto-bump semver, backward compatibility checks, field diff analysis, migration tracking |
 | **Extraction** | Extract fields per schema with value deduplication & confidence metrics |
-| **Job Tracking** | Create jobs (202 Accepted), poll status, retrieve results |
+| **Job Tracking** | Create jobs (202 Accepted), poll status, retrieve results with cost tracking |
 | **Cloud Integration** | Support Gemini & Mistral with cost estimation |
 | **Local Inference** | Fallback to PaddleOCR if VLM unavailable |
-| **UI** | Gradio interface for upload → schema selection → result review |
+| **Frontend** | React UI with TanStack Router/Query, schema management, job monitoring, batch operations |
 
 ## Non-Functional Requirements
 
 | Requirement | Target |
 |---|---|
-| **Latency** | Local: <3s; Cloud: <10s (p95) |
-| **Throughput** | 3 concurrent workers (configurable) |
+| **Latency** | Local: <3s; Cloud: <10s (p95); Webhook delivery: <5s (first attempt) |
+| **Throughput** | 3 concurrent workers, batch window 60s, webhook async queue |
 | **Accuracy** | >90% confidence on structured fields |
 | **Languages** | English, Japanese, Vietnamese |
-| **Uptime** | Graceful degradation on cloud failures |
-| **Code Quality** | <200 LOC per file; 100% test coverage on core services |
+| **Uptime** | Graceful degradation on cloud failures, webhook retry backoff |
+| **Code Quality** | <200 LOC per file; 100% test coverage on services; 95%+ on pipelines |
+| **Test Coverage** | 204 tests, 6.5s execution, all critical paths covered |
+| **API Response** | 202 Accepted for async operations (batch, extraction) |
+| **Database** | SQLite for dev/small deployments, PostgreSQL-compatible schema |
+| **Security** | SHA256 API key hash, JWT HS256, HMAC-SHA256 webhook signing, bcrypt 12 rounds |
 
 ## Technical Architecture
 
 ### Core Components
-1. **Schema Engine** — Models, validation, CSV/JSON parsing
-2. **Extraction Pipelines** — Base provider interface + cloud/local implementations
-3. **Job Service** — Async queue, status tracking, SQLite persistence
-4. **Router Service** — Intelligent provider selection (local → cloud fallback)
-5. **Web Layer** — FastAPI REST API + optional Gradio UI
+1. **Auth Middleware** — API key (SHA256) & JWT (HS256) validation, workspace scoping
+2. **Workspace Service** — Multi-tenant isolation, default workspace management
+3. **Pipeline Engine** — YAML config parser, step executor, registry pattern
+4. **Batch Service** — Multi-file upload, atomic counters, status derivation
+5. **Webhook Service** — Event registry, HMAC-SHA256 signing, async delivery queue
+6. **Schema Engine** — Versioning, migration, backward compatibility checks
+7. **Extraction Pipelines** — Base provider interface + cloud/local implementations
+8. **Job Service** — Async queue, status tracking, cost aggregation
+9. **Frontend (React)** — TanStack Router, Query caching, API integration
 
 ### Data Flow
 ```
-Upload Image → Validate Schema → Enqueue Job →
-Route (Local/Cloud) → Extract → Confidence Score → Store Result → Poll/Retrieve
+Auth (API Key/JWT) → Workspace Scoping →
+  Single: Enqueue Job → Extract → Score → Store
+  Batch: Upload Files → Create Batch → Enqueue → Process Each → Aggregate Status
+  Webhooks: Trigger Event → Sign HMAC → Async Deliver → Retry on Failure
+  Pipelines: Parse YAML → Step Registry → Execute Sequential → Store Result
 ```
 
 ## Acceptance Criteria
 
-- [ ] All 67 tests passing (unit + E2E)
-- [ ] REST API functional with documented endpoints
-- [ ] Gradio UI operational for manual testing
-- [ ] Cost tracking accurate for cloud providers
-- [ ] Local fallback works when VLM unavailable
-- [ ] Documentation complete (API, architecture, code standards)
+- [x] All 204 tests passing (148 unit + 56 E2E), 6.5s execution
+- [x] REST API (39 endpoints) functional with documented requests/responses
+- [x] Authentication: API key + JWT working, workspace isolation enforced
+- [x] Batch processing: multi-file upload, atomic status tracking, cancellation
+- [x] Pipeline engine: YAML parsing, executor, step registry, default pipeline
+- [x] Webhook system: event subscription, HMAC signing, retry backoff
+- [x] Schema versioning: semver auto-bump, compatibility checks, migration tracking
+- [x] Frontend: TanStack React app, all major workflows (jobs, batches, pipelines, webhooks)
+- [x] Cost tracking accurate for cloud providers
+- [x] Local fallback works when VLM unavailable
+- [x] Documentation complete (API, architecture, code standards, codebase summary)
 
 ## Success Metrics
 
-- **Field Accuracy** — >90% confidence on known test documents
-- **Latency** — P95 <10s for cloud, <3s for local
-- **Availability** — Graceful handling of provider failures
-- **Coverage** — 100% test coverage on services/pipelines
+| Metric | Target | Status |
+|---|---|---|
+| **Field Accuracy** | >90% confidence on test documents | Pass |
+| **Latency (Cloud)** | P95 <10s | Pass |
+| **Latency (Local)** | P95 <3s | Pass |
+| **Test Coverage** | 100% services, 95%+ pipelines | Pass |
+| **API Endpoints** | 39 documented routes | Complete |
+| **Database Tables** | 11 (up from 3) | Complete |
+| **Test Execution** | <7s total | 6.5s |
+| **Workspace Isolation** | All queries filtered by workspace_id | Enforced |
