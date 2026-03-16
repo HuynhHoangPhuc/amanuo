@@ -50,5 +50,6 @@ class SchemaResponse(BaseModel):
     id: str
     name: str
     fields: list[SchemaField]
+    version: str = "1.0.0"
     created_at: str
     updated_at: str

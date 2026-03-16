@@ -14,7 +14,8 @@ SchemaField = _models.SchemaField
 
 
 async def save_schema(
-    db: aiosqlite.Connection, name: str, schema: ExtractionSchema
+    db: aiosqlite.Connection, name: str, schema: ExtractionSchema,
+    workspace_id: str = "default",
 ) -> SavedSchema:
     """Save a new schema to the database."""
     schema_id = str(uuid.uuid4())
@@ -22,8 +23,9 @@ async def save_schema(
     fields_json = json.dumps([f.model_dump() for f in schema.fields])
 
     await db.execute(
-        "INSERT INTO schemas (id, name, fields, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-        (schema_id, name, fields_json, now, now),
+        """INSERT INTO schemas (id, name, fields, created_at, updated_at, workspace_id, current_version)
+           VALUES (?, ?, ?, ?, ?, ?, '1.0.0')""",
+        (schema_id, name, fields_json, now, now, workspace_id),
     )
     await db.commit()
 

@@ -3,13 +3,14 @@
 import importlib
 import json
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
 from src.config import settings
 from src.schemas import ExtractionSchema, SchemaField, SchemaValidationError, validate_or_raise
 
 _job_service = importlib.import_module("src.services.job-service")
 _worker = importlib.import_module("src.services.extraction-worker")
+_auth = importlib.import_module("src.middleware.auth-middleware")
 
 router = APIRouter()
 
@@ -24,12 +25,10 @@ async def extract(
     schema_id: str | None = Form(None),
     cloud_provider: str = Form("gemini"),
     lang: str = Form("en"),
+    pipeline_id: str | None = Form(None),
+    workspace_id: str = Depends(_auth.get_workspace_id),
 ) -> dict:
-    """Submit an extraction job.
-
-    Accepts multipart form with image file and extraction parameters.
-    Returns 202 with job_id for async processing.
-    """
+    """Submit an extraction job. Returns 202 with job_id for async processing."""
     # Validate file type
     if file.content_type and file.content_type not in _ALLOWED_TYPES:
         raise HTTPException(400, f"Unsupported file type: {file.content_type}")
@@ -69,7 +68,9 @@ async def extract(
         cloud_provider=cloud_provider if mode != "local_only" else None,
         schema_fields_json=parsed_fields,
         schema_id=schema_id,
-        input_file="",  # Will be updated after save
+        input_file="",
+        workspace_id=workspace_id,
+        pipeline_id=pipeline_id,
     )
 
     # Save uploaded file

@@ -29,6 +29,9 @@ async def create_job(
     schema_fields_json: str | None,
     schema_id: str | None,
     input_file: str,
+    workspace_id: str = "default",
+    batch_id: str | None = None,
+    pipeline_id: str | None = None,
 ) -> str:
     """Create a new job record. Returns job ID."""
     job_id = str(uuid.uuid4())
@@ -38,9 +41,10 @@ async def create_job(
     try:
         await db.execute(
             """INSERT INTO jobs (id, status, mode, cloud_provider, schema_fields,
-               schema_id, input_file, created_at)
-               VALUES (?, 'pending', ?, ?, ?, ?, ?, ?)""",
-            (job_id, mode, cloud_provider, schema_fields_json, schema_id, input_file, now),
+               schema_id, input_file, created_at, workspace_id, batch_id, pipeline_id)
+               VALUES (?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (job_id, mode, cloud_provider, schema_fields_json, schema_id, input_file,
+             now, workspace_id, batch_id, pipeline_id),
         )
         await db.commit()
     finally:
@@ -49,11 +53,14 @@ async def create_job(
     return job_id
 
 
-async def get_job(job_id: str) -> JobResponse | None:
-    """Get job by ID."""
+async def get_job(job_id: str, workspace_id: str = "default") -> JobResponse | None:
+    """Get job by ID, scoped to workspace."""
     db = await _get_db()
     try:
-        cursor = await db.execute("SELECT * FROM jobs WHERE id = ?", (job_id,))
+        cursor = await db.execute(
+            "SELECT * FROM jobs WHERE id = ? AND workspace_id = ?",
+            (job_id, workspace_id),
+        )
         row = await cursor.fetchone()
         if not row:
             return None
@@ -62,16 +69,31 @@ async def get_job(job_id: str) -> JobResponse | None:
         await db.close()
 
 
-async def list_jobs(limit: int = 20, offset: int = 0) -> JobListResponse:
-    """List jobs with pagination."""
+async def get_job_raw(job_id: str) -> dict | None:
+    """Get raw job row by ID (no workspace filter, for internal use)."""
     db = await _get_db()
     try:
-        cursor = await db.execute("SELECT COUNT(*) FROM jobs")
+        cursor = await db.execute("SELECT * FROM jobs WHERE id = ?", (job_id,))
+        row = await cursor.fetchone()
+        if not row:
+            return None
+        return dict(row)
+    finally:
+        await db.close()
+
+
+async def list_jobs(workspace_id: str = "default", limit: int = 20, offset: int = 0) -> JobListResponse:
+    """List jobs with pagination, scoped to workspace."""
+    db = await _get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT COUNT(*) FROM jobs WHERE workspace_id = ?", (workspace_id,)
+        )
         total = (await cursor.fetchone())[0]
 
         cursor = await db.execute(
-            "SELECT * FROM jobs ORDER BY created_at DESC LIMIT ? OFFSET ?",
-            (limit, offset),
+            "SELECT * FROM jobs WHERE workspace_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            (workspace_id, limit, offset),
         )
         rows = await cursor.fetchall()
 

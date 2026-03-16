@@ -1,4 +1,4 @@
-"""Background extraction worker — processes jobs asynchronously."""
+"""Background extraction worker — processes jobs via pipeline engine."""
 
 import asyncio
 import importlib
@@ -11,6 +11,9 @@ from src.schemas import ExtractionSchema, SchemaField
 _job_service = importlib.import_module("src.services.job-service")
 _router_service = importlib.import_module("src.services.router-service")
 _confidence = importlib.import_module("src.services.confidence-scorer")
+_pipeline_executor = importlib.import_module("src.engine.pipeline-executor")
+_pipeline_config = importlib.import_module("src.engine.pipeline-config")
+_step_interface = importlib.import_module("src.engine.step-interface")
 
 logger = logging.getLogger(__name__)
 
@@ -25,49 +28,47 @@ async def enqueue_job(job_id: str) -> None:
 
 
 async def process_job(job_id: str) -> None:
-    """Process a single extraction job."""
-    job = await _job_service.get_job(job_id)
-    if not job:
+    """Process a single extraction job via pipeline engine or direct routing."""
+    from src.config import settings
+    from src.database import get_connection, get_db_path
+
+    # Get raw job data
+    db = await get_connection(get_db_path(settings.database_url))
+    try:
+        cursor = await db.execute("SELECT * FROM jobs WHERE id = ?", (job_id,))
+        row = await cursor.fetchone()
+    finally:
+        await db.close()
+
+    if not row:
         logger.error("Job %s not found", job_id)
         return
 
     try:
         await _job_service.update_job(job_id, status="processing")
 
-        # Load image
-        if not job.mode:
-            raise ValueError("Job has no mode set")
-
-        # Get raw job data to access input_file and schema_fields
-        from src.config import settings
-        from src.database import get_connection, get_db_path
-        db = await get_connection(get_db_path(settings.database_url))
-        try:
-            cursor = await db.execute("SELECT * FROM jobs WHERE id = ?", (job_id,))
-            row = await cursor.fetchone()
-        finally:
-            await db.close()
-
-        if not row or not row["input_file"]:
+        if not row["input_file"]:
             raise FileNotFoundError("No input file for job")
 
         image = Path(row["input_file"]).read_bytes()
-
-        # Load schema
         schema = _load_schema(row)
+        workspace_id = row["workspace_id"] or "default"
+        pipeline_id = row["pipeline_id"]
 
-        # Route to provider
-        provider = _router_service.route(
-            row["mode"], row["cloud_provider"] or "gemini"
-        )
+        # Try pipeline execution if pipeline_id is set
+        if pipeline_id:
+            result_ctx = await _execute_via_pipeline(
+                pipeline_id, image, row, schema, workspace_id, job_id
+            )
+            if result_ctx:
+                await _save_pipeline_result(job_id, result_ctx, schema, workspace_id)
+                return
 
-        # Execute extraction
+        # Fallback: direct routing (original MVP flow)
+        provider = _router_service.route(row["mode"], row["cloud_provider"] or "gemini")
         result = await provider.extract(image, schema)
-
-        # Calculate confidence
         conf = _confidence.score(result, schema)
 
-        # Update job with results
         await _job_service.update_job(
             job_id,
             status="completed",
@@ -77,10 +78,100 @@ async def process_job(job_id: str) -> None:
             cost_output_tokens=result.cost.output_tokens,
             cost_estimated_usd=result.cost.estimated_cost_usd,
         )
+        await _publish_job_event(workspace_id, job_id, "completed", conf)
 
     except Exception as e:
         logger.exception("Job %s failed: %s", job_id, e)
         await _job_service.update_job(job_id, status="failed", error=str(e))
+        workspace_id = row["workspace_id"] or "default"
+        await _publish_job_event(workspace_id, job_id, "failed", error=str(e))
+
+    # Update batch counters if job is part of a batch
+    if row["batch_id"]:
+        await _update_batch(row["batch_id"], row["status"] if row else "failed")
+
+
+async def _execute_via_pipeline(pipeline_id, image, row, schema, workspace_id, job_id):
+    """Execute job through pipeline engine. Returns StepContext or None."""
+    from src.config import settings
+    from src.database import get_connection, get_db_path
+
+    db = await get_connection(get_db_path(settings.database_url))
+    try:
+        cursor = await db.execute("SELECT config FROM pipelines WHERE id = ?", (pipeline_id,))
+        p_row = await cursor.fetchone()
+    finally:
+        await db.close()
+
+    if not p_row:
+        logger.warning("Pipeline %s not found, falling back to direct routing", pipeline_id)
+        return None
+
+    config = _pipeline_config.parse_pipeline_yaml(p_row["config"])
+    schema_fields_json = row["schema_fields"]
+
+    context = _step_interface.StepContext(
+        image=image,
+        schema_fields=schema_fields_json,
+        schema_id=row["schema_id"],
+        workspace_id=workspace_id,
+        job_id=job_id,
+        mode=row["mode"],
+        cloud_provider=row["cloud_provider"] or "gemini",
+    )
+
+    return await _pipeline_executor.execute_pipeline(config, context)
+
+
+async def _save_pipeline_result(job_id, context, schema, workspace_id):
+    """Save pipeline execution result to the job."""
+    from src.schemas import ExtractionResult
+
+    result_list = None
+    confidence = context.confidence
+
+    if context.result:
+        result_list = [ExtractionResult(**r) if isinstance(r, dict) else r for r in context.result]
+        if confidence is None:
+            confidence = _confidence.score_from_results(result_list, schema) if hasattr(_confidence, 'score_from_results') else 0.0
+
+    await _job_service.update_job(
+        job_id,
+        status="completed",
+        result=result_list,
+        confidence=confidence,
+        cost_input_tokens=context.cost_input_tokens,
+        cost_output_tokens=context.cost_output_tokens,
+        cost_estimated_usd=context.cost_estimated_usd,
+    )
+    await _publish_job_event(workspace_id, job_id, "completed", confidence)
+
+
+async def _publish_job_event(workspace_id, job_id, status, confidence=None, error=None):
+    """Publish webhook event for job completion/failure."""
+    try:
+        _webhook_service = importlib.import_module("src.services.webhook-service")
+        event_type = f"job.{status}"
+        data = {"job_id": job_id, "status": status}
+        if confidence is not None:
+            data["confidence"] = confidence
+        if error:
+            data["error"] = error
+        await _webhook_service.publish_event(workspace_id, event_type, data)
+    except Exception:
+        pass  # Non-critical — don't fail the job
+
+
+async def _update_batch(batch_id, job_status):
+    """Update batch counters after job completion."""
+    try:
+        _batch_service = importlib.import_module("src.services.batch-service")
+        if job_status == "completed":
+            await _batch_service.update_batch_counters(batch_id, completed_delta=1)
+        elif job_status == "failed":
+            await _batch_service.update_batch_counters(batch_id, failed_delta=1)
+    except (ModuleNotFoundError, Exception):
+        pass  # Phase 4 not yet implemented or non-critical
 
 
 def _load_schema(row) -> ExtractionSchema:
@@ -90,7 +181,6 @@ def _load_schema(row) -> ExtractionSchema:
         return ExtractionSchema(fields=[SchemaField(**f) for f in fields_data])
 
     if row["schema_id"]:
-        # Would need async DB call — for MVP, schema_fields is always populated
         raise ValueError("schema_id lookup not implemented in worker; use inline schema_fields")
 
     raise ValueError("Job has no schema defined")
