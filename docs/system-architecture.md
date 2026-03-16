@@ -15,7 +15,7 @@
 │  └────────────────────────────────────────────────────────────────────────┘ │
 │                            ↓ HTTP/REST (port 3000→8000)                     │
 │                                                                              │
-│  API Layer (39 Endpoints)                                                   │
+│  API Layer (42+ Endpoints)                                                  │
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
 │  │  Auth: /auth/register /auth/login /auth/logout                        │ │
 │  │  Keys: /api-keys (CRUD, SHA256 hash)                                  │ │
@@ -23,6 +23,8 @@
 │  │  Extraction: /extract /jobs /schemas /schemas/{id}/versions          │ │
 │  │  Batch: /extract/batch /batches /batches/{id}/cancel                 │ │
 │  │  Pipelines: /pipelines (YAML config CRUD)                            │ │
+│  │  Templates: /templates /templates/{id}/import /schemas/suggest       │ │
+│  │  WebSocket: /ws/events (Redis pub/sub, 30s heartbeat)                │ │
 │  │  Webhooks: /webhooks /webhooks/{id}/deliveries (retry backoff)       │ │
 │  │  Health: /health (liveness + provider availability)                   │ │
 │  └────────────────────────────────────────────────────────────────────────┘ │
@@ -44,8 +46,13 @@
 │  │  Webhook Service: Event registry, HMAC-SHA256 signing, delivery     │   │
 │  │  Webhook Delivery: Async queue, retry backoff [60s, 5m, 30m, 2h]   │   │
 │  │  Schema Service: Versioning, migration tracking, diff analysis      │   │
+│  │  Schema Suggest: VLM field suggestion, graceful degradation         │   │
+│  │  Template Service: Template CRUD, seeding, marketplace              │   │
+│  │  Redis Pool: ARQ connection pool singleton                          │   │
+│  │  ARQ Worker: Background job processor, async handlers               │   │
+│  │  Event Broadcaster: Redis pub/sub for WebSocket events              │   │
 │  │  Router Service: Provider selection (local → cloud fallback)        │   │
-│  │  Extraction Worker: Job dequeue, provider delegation, scoring       │   │
+│  │  Extraction Worker: ARQ job enqueue, provider delegation, scoring   │   │
 │  │  Folder Watcher: watchfiles-based batch aggregation (60s window)    │   │
 │  │  Confidence Scorer: Field-level aggregation                         │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
@@ -68,8 +75,11 @@
 │                                  ↓                                           │
 │  Data Layer                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  Database: SQLite (11 tables: users, workspaces, jobs, batches,    │   │
-│  │            pipelines, webhooks, deliveries, schemas, versions, etc) │   │
+│  │  Database: SQLAlchemy ORM + SQLite/PostgreSQL (13 tables)           │   │
+│  │    Tables: users, workspaces, jobs, batches, pipelines, webhooks,  │   │
+│  │             deliveries, schemas, versions, api_keys, templates      │   │
+│  │  Queue: ARQ (Redis-backed job queue, in-memory fallback)            │   │
+│  │  Pub/Sub: Redis for WebSocket event broadcast                       │   │
 │  │  File Storage: Uploaded documents, batch items                     │   │
 │  │  Cache: In-memory schema templates, provider availability          │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
@@ -266,7 +276,73 @@ Result format:
 7. Version history accessible via GET /schemas/{id}/versions
 ```
 
-## Database Schema (11 Tables)
+## Job Queue (ARQ + Redis)
+
+### Architecture
+- **Queue Backend**: Redis (7-alpine in docker-compose.yml, AOF persistence)
+- **Worker Settings**: `arq-worker-settings.py` defines WorkerSettings, job handlers
+- **Redis Pool**: Singleton ARQ Redis pool in `redis-pool.py`
+- **Job Handlers**: `process_extraction_job()`, `deliver_webhook_task()` in WorkerSettings
+
+### Job Processing Flow
+```
+1. extraction-worker.py calls enqueue_job()
+2. Job enqueued to ARQ queue (or asyncio.Queue fallback if Redis unavailable)
+3. Worker process (via `uv run arq src.services.arq-worker-settings.WorkerSettings`):
+   - Dequeues job
+   - Executes handler (extraction logic)
+   - Publishes job.completed / job.failed event
+4. Event broadcaster notifies WebSocket subscribers
+```
+
+### Running Standalone Worker
+```bash
+uv run arq src.services.arq-worker-settings.WorkerSettings
+```
+
+## WebSocket Event Stream (Redis Pub/Sub)
+
+### Architecture
+- **Broadcaster**: Redis pub/sub via `broadcaster[redis]` package
+- **Singleton**: `event-broadcaster.py` creates module-level broadcaster instance
+- **Events Published**: `job.completed`, `job.failed`, `batch.progress`, `batch.completed`, `batch.failed`
+- **Client Subscription**: `GET /ws/events?api_key=X` (TanStack Start)
+
+### WebSocket Protocol
+```
+GET /ws/events?api_key={api_key}
+Response: 30s heartbeat, real-time JSON events
+
+Event format:
+{
+  "event_type": "job.completed" | "job.failed" | "batch.progress" | ...,
+  "workspace_id": "...",
+  "data": { "job_id": "...", "status": "...", "result": {...} },
+  "timestamp": "2026-03-16T..."
+}
+```
+
+### Client-Side Handling
+- `frontend/src/lib/websocket-client.ts` — exponential backoff reconnect
+- `frontend/src/hooks/use-realtime-events.ts` — TanStack Query cache invalidation
+- Auto-refresh job/batch status on event receipt
+
+## Template Marketplace & Schema Suggest
+
+### Schema Templates
+- **Storage**: `schema_templates` table (ORM model: `SchemaTemplate`)
+- **Curated Templates**: 4 built-in templates in `src/data/curated-templates.yaml`:
+  - Invoice (EN), Invoice (JP), Receipt, ID Card
+- **Endpoints**: GET /templates, POST /templates/{id}/import
+
+### Schema Auto-Suggest
+- **Service**: `schema-suggest-service.py` uses VLM to suggest fields
+- **Endpoint**: `POST /schemas/suggest` (payload: document file + initial schema)
+- **VLM Call**: Query extraction VLM, extract field names + types
+- **Graceful Degradation**: Falls back to empty suggestion if VLM unavailable
+- **Frontend**: `schema-suggest-form.tsx`, `suggested-fields-editor.tsx`
+
+## Database Schema (13 Tables)
 
 ### Authentication & Workspaces
 ```sql
@@ -381,7 +457,7 @@ CREATE TABLE batch_items (
 );
 ```
 
-### Pipelines & Webhooks
+### Pipelines, Webhooks & Templates
 ```sql
 -- Pipelines
 CREATE TABLE pipelines (
@@ -422,6 +498,19 @@ CREATE TABLE webhook_deliveries (
   INDEX(status),
   INDEX(next_retry_at)
 );
+
+-- Schema Templates (Template Marketplace)
+CREATE TABLE schema_templates (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  category TEXT,  -- "invoice", "receipt", "id_card", etc.
+  schema_fields TEXT,  -- JSON array
+  curated BOOLEAN DEFAULT FALSE,
+  created_at TEXT,
+  INDEX(category),
+  INDEX(curated)
+);
 ```
 
 ## Technology Stack
@@ -430,9 +519,12 @@ CREATE TABLE webhook_deliveries (
 | Component | Technology | Purpose |
 |---|---|---|
 | **Web Framework** | FastAPI 0.115+ | REST API server, async middleware |
-| **Async Runtime** | asyncio | Job queue, worker pool, webhooks |
-| **Database** | SQLite + aiosqlite | Persistence (dev/small); PostgreSQL-compatible |
+| **ORM** | SQLAlchemy 2.0+ | Async ORM, migration (alembic) |
+| **Database** | SQLite / PostgreSQL | Persistence; SQLAlchemy supports both |
+| **Database Driver** | aiosqlite, asyncpg | Async database access |
 | **Authentication** | PyJWT, bcrypt | JWT tokens (HS256), password hashing (rounds=12) |
+| **Job Queue** | ARQ 0.27+, Redis 5.3+ | Async background job processing |
+| **Pub/Sub** | broadcaster[redis] 0.3+ | WebSocket event broadcast |
 | **Config** | pydantic-settings | Environment-driven settings |
 | **YAML** | PyYAML | Pipeline configuration parsing |
 | **File Watcher** | watchfiles | Batch aggregation (folder monitoring) |

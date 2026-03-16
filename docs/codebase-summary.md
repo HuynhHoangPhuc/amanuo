@@ -30,7 +30,9 @@ amanuo/
 │   │   ├── batch.py                 # POST /extract/batch, GET /batches, cancel
 │   │   ├── pipelines.py             # CRUD /pipelines (YAML config)
 │   │   ├── schemas.py               # CRUD /schemas, version history
+│   │   ├── templates.py             # GET /templates, POST /import, schema suggest
 │   │   ├── webhooks.py              # Register, test, delivery logs
+│   │   ├── websocket-events.py      # GET /ws/events (real-time event stream)
 │   │   ├── workspaces.py            # CRUD /workspaces
 │   │   └── health.py                # GET /health
 │   │
@@ -43,9 +45,14 @@ amanuo/
 │   │   ├── pipeline-service.py      # Pipeline CRUD, executor delegation
 │   │   ├── webhook-service.py       # Event registration, HMAC-SHA256 signing
 │   │   ├── webhook-delivery.py      # Async delivery queue, retry backoff
-│   │   ├── extraction-worker.py     # Job dequeue, provider selection, scoring
+│   │   ├── extraction-worker.py     # ARQ job enqueue, provider selection, scoring
+│   │   ├── redis-pool.py            # ARQ Redis connection pool singleton
+│   │   ├── arq-worker-settings.py   # ARQ worker config, job handlers
+│   │   ├── event-broadcaster.py     # Redis pub/sub for WebSocket events
 │   │   ├── router-service.py        # Provider selection (local→cloud fallback)
 │   │   ├── confidence-scorer.py     # Field-level aggregation
+│   │   ├── schema-suggest-service.py # VLM field suggestion for schema design
+│   │   ├── template-service.py      # Schema template CRUD + seeding
 │   │   ├── folder-watcher.py        # watchfiles batch aggregation (60s window)
 │   │   └── __init__.py
 │   │
@@ -88,6 +95,9 @@ amanuo/
 │   │   ├── schema-versioning.py     # Semver auto-bump, compatibility checks
 │   │   ├── schema-migration.py      # Migration tracking, version history
 │   │   └── csv-prompt-builder.py    # CSV→schema conversion
+│   │
+│   ├── data/
+│   │   └── curated-templates.yaml   # Built-in 4 templates (Invoice, Receipt, ID Card)
 │   │
 │   └── ui/
 │       ├── __init__.py
@@ -272,12 +282,15 @@ amanuo/
 
 | Module | Purpose |
 |---|---|
+| `models/base.py` | `Base` ORM declarative, `TimestampMixin` (created_at, updated_at) |
 | `models/api-models.py` | Pydantic request/response schemas (ExtractionRequest, JobResponse, etc.) |
-| `models/job.py` | Job ORM model, SQLite mapping |
+| `models/job.py` | Job ORM model, SQLAlchemy mapping |
 | `models/batch.py` | Batch ORM model, item tracking |
 | `models/pipeline.py` | Pipeline ORM model, YAML config storage |
 | `models/webhook.py` | Webhook ORM model, event types, secret |
 | `models/workspace.py` | Workspace ORM model, user isolation |
+| `models/schema-orm.py` | SchemaORM, SchemaVersionORM models |
+| `models/schema-template.py` | SchemaTemplate ORM for template marketplace |
 
 ### Frontend (React 19 + TanStack)
 
@@ -519,9 +532,11 @@ For each step in config:
 | Category | Packages |
 |---|---|
 | **Web** | fastapi 0.115+, uvicorn, python-multipart |
-| **Database** | aiosqlite, pydantic-settings |
+| **Database** | sqlalchemy[asyncio], asyncpg, aiosqlite, alembic |
 | **Authentication** | PyJWT, bcrypt |
-| **Config** | pyyaml (pipeline configs) |
+| **Job Queue** | arq 0.27+, redis 5.3+, fakeredis 2.34+ |
+| **Real-time** | broadcaster[redis] (WebSocket event pub/sub) |
+| **Config** | pyyaml (pipeline configs), pydantic-settings |
 | **Concurrency** | watchfiles (batch aggregation) |
 | **Cloud APIs** | google-genai, mistralai |
 | **Local VLM** | ollama, vllm, llama-cpp-python |
@@ -553,6 +568,10 @@ JWT_SECRET={your-secret}
 JWT_EXPIRATION_MINUTES=15
 BCRYPT_ROUNDS=12
 
+# Job Queue (ARQ + Redis)
+REDIS_URL=redis://localhost:6379
+ARQ_BACKGROUND_JOBS_ENABLED=true
+
 # Cloud providers
 GEMINI_API_KEY=
 MISTRAL_API_KEY=
@@ -570,6 +589,10 @@ DEFAULT_MODE=auto
 
 # Webhooks
 WEBHOOK_RETRY_BACKOFF=[60,300,1800,7200]
+
+# WebSocket Events (Redis pub/sub)
+EVENT_BROADCASTER_ENABLED=true
+EVENT_HEARTBEAT_INTERVAL=30
 ```
 
 ## Summary Statistics

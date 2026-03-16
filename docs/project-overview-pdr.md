@@ -11,9 +11,9 @@ Amanuo is an adaptive hybrid OCR system for **structured document extraction** a
 3. **Cost-Efficiency** — Minimize token usage via schema-driven extraction; support multiple cloud providers
 4. **Developer Experience** — Clear REST API, batch job processing, persistent schema templates
 
-## Scope (Phase 1 Platform Evolution)
+## Scope (Phases 1, 2, 3, 6 Completed)
 
-### In-Scope
+### Completed Features
 **Multi-Workspace Platform**
 - Soft multi-tenancy via workspace_id FK in all tables
 - User registration/login with bcrypt (12 rounds) + JWT (HS256, 15min access / 7d refresh)
@@ -43,21 +43,49 @@ Amanuo is an adaptive hybrid OCR system for **structured document extraction** a
 - Backward compatibility checks, field diff analysis
 - Version history endpoint, schema migration tracking
 
+**SQLAlchemy ORM Migration (Phase 1)**
+- `src/database.py` refactored: `create_engine_from_url()`, `get_session()`, async sessions
+- `src/models/base.py` created: `Base`, `TimestampMixin`
+- All services rewritten to use SQLAlchemy AsyncSession (no raw SQL)
+- Dependencies: sqlalchemy[asyncio], asyncpg, alembic
+
+**Redis + ARQ Job Queue (Phase 2)**
+- `src/services/redis-pool.py` — ARQ Redis pool singleton
+- `src/services/arq-worker-settings.py` — WorkerSettings, job handlers
+- `src/services/extraction-worker.py` refactored — ARQ job enqueue
+- Standalone worker: `uv run arq src.services.arq-worker-settings.WorkerSettings`
+- docker-compose.yml updated: Redis (7-alpine, AOF) + PostgreSQL services
+
+**WebSocket Event Stream (Phase 3)**
+- `src/services/event-broadcaster.py` — Redis pub/sub singleton
+- `src/routers/websocket-events.py` — `GET /ws/events?api_key=X`, 30s heartbeat
+- job.completed/job.failed/batch.progress events published
+- Frontend: `websocket-client.ts`, `use-realtime-events.ts` (TanStack Query cache invalidation)
+
+**Schema Auto-Suggest & Template Marketplace (Phase 6)**
+- `src/models/schema-template.py` — SchemaTemplate ORM
+- `src/services/schema-suggest-service.py` — VLM field suggestion, graceful degradation
+- `src/services/template-service.py` — template CRUD + seed
+- `src/routers/templates.py` — GET /templates, POST /templates/{id}/import, POST /schemas/suggest
+- `src/data/curated-templates.yaml` — 4 curated templates (Invoice EN/JP, Receipt, ID Card)
+- Frontend: templates marketplace, suggested-fields-editor
+
 **Frontend (TanStack)**
 - React 19 + TanStack Router (file-based) + TanStack Query + Tailwind CSS v4
-- Pages: Dashboard, Schemas, Jobs, Pipelines, Batches, Webhooks, Settings
-- API client with X-API-Key auth, toast notifications
-- Build: 1831 modules, 17 chunks, 0 errors
+- Pages: Dashboard, Schemas, Jobs, Pipelines, Batches, Webhooks, Templates, Settings
+- API client with X-API-Key auth, toast notifications, WebSocket event handling
+- Build: 1831+ modules, 17+ chunks, 0 errors
 
 **Testing**
-- 204 tests (148 unit + 56 E2E), 6.5s execution
-- Coverage: auth, batch, pipeline, webhook, workspace, schema versioning
+- 243 tests (increase from 204), 148 unit + 56 E2E + 39 new (ARQ, WebSocket, templates)
+- Execution time: ~6.5s
+- Coverage: auth, batch, pipeline, webhook, workspace, schema versioning, job queue, events
 
-### Out-of-Scope (Phase 2+)
+### Out-of-Scope (Phase 4+)
 - Fine-tuning or model training
-- Real-time streaming (WebSockets)
 - OAuth / social authentication
-- Advanced analytics & cost breakdowns
+- Advanced analytics & cost breakdowns per workspace
+- HITL (human-in-the-loop) correction workflows
 
 ## Functional Requirements
 
