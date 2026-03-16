@@ -6,9 +6,6 @@ import logging
 
 from fastapi import HTTPException, Request
 
-from src.config import settings
-from src.database import get_connection, get_db_path
-
 logger = logging.getLogger(__name__)
 
 
@@ -19,33 +16,19 @@ async def get_workspace_id(request: Request) -> str:
         return "default"
 
     key_hash = hashlib.sha256(api_key.encode()).hexdigest()
-    db = await get_connection(get_db_path(settings.database_url))
-    try:
-        cursor = await db.execute(
-            "SELECT id, workspace_id, is_active FROM api_keys WHERE key_hash = ?",
-            (key_hash,),
-        )
-        record = await cursor.fetchone()
-        if not record or not record["is_active"]:
-            raise HTTPException(401, "Invalid or inactive API key")
 
-        asyncio.create_task(_update_last_used(record["id"]))
-        return record["workspace_id"]
-    finally:
-        await db.close()
+    # Import lazily to avoid circular imports at module load time
+    _auth_service = _get_auth_service()
+    record = await _auth_service.validate_key(key_hash)
+
+    if not record or not record["is_active"]:
+        raise HTTPException(401, "Invalid or inactive API key")
+
+    asyncio.create_task(_auth_service.update_key_last_used(record["id"]))
+    return record["workspace_id"]
 
 
-async def _update_last_used(key_id: str) -> None:
-    """Non-critical background update of last_used_at timestamp."""
-    try:
-        db = await get_connection(get_db_path(settings.database_url))
-        try:
-            await db.execute(
-                "UPDATE api_keys SET last_used_at = datetime('now') WHERE id = ?",
-                (key_id,),
-            )
-            await db.commit()
-        finally:
-            await db.close()
-    except Exception:
-        pass
+def _get_auth_service():
+    """Lazy import to avoid circular dependency at startup."""
+    import importlib
+    return importlib.import_module("src.services.auth-service")

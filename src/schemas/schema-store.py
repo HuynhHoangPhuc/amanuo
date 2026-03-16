@@ -1,11 +1,17 @@
-"""SQLite CRUD operations for saved extraction schemas."""
+"""SQLite CRUD operations for saved extraction schemas — SQLAlchemy ORM."""
 
 import importlib
 import json
 import uuid
 from datetime import datetime
 
-import aiosqlite
+from sqlalchemy import select, delete
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.database import get_session_factory
+
+_schema_orm = importlib.import_module("src.models.schema-orm")
+SchemaORM = _schema_orm.SchemaORM
 
 _models = importlib.import_module("src.schemas.schema-models")
 ExtractionSchema = _models.ExtractionSchema
@@ -13,8 +19,14 @@ SavedSchema = _models.SavedSchema
 SchemaField = _models.SchemaField
 
 
+def _get_session():
+    return get_session_factory()()
+
+
 async def save_schema(
-    db: aiosqlite.Connection, name: str, schema: ExtractionSchema,
+    db,  # kept for backward-compat signature; ignored — we open our own session
+    name: str,
+    schema: ExtractionSchema,
     workspace_id: str = "default",
 ) -> SavedSchema:
     """Save a new schema to the database."""
@@ -22,57 +34,65 @@ async def save_schema(
     now = datetime.now().isoformat()
     fields_json = json.dumps([f.model_dump() for f in schema.fields])
 
-    await db.execute(
-        """INSERT INTO schemas (id, name, fields, created_at, updated_at, workspace_id, current_version)
-           VALUES (?, ?, ?, ?, ?, ?, '1.0.0')""",
-        (schema_id, name, fields_json, now, now, workspace_id),
-    )
-    await db.commit()
+    async with _get_session() as session:
+        orm = SchemaORM(
+            id=schema_id,
+            name=name,
+            fields=fields_json,
+            created_at=now,
+            updated_at=now,
+            workspace_id=workspace_id,
+            current_version="1.0.0",
+        )
+        session.add(orm)
+        await session.commit()
 
     return SavedSchema(
         id=schema_id, name=name, fields=schema.fields, created_at=now, updated_at=now
     )
 
 
-async def get_schema(db: aiosqlite.Connection, schema_id: str) -> SavedSchema | None:
+async def get_schema(db, schema_id: str) -> SavedSchema | None:
     """Load a schema by ID."""
-    cursor = await db.execute("SELECT * FROM schemas WHERE id = ?", (schema_id,))
-    row = await cursor.fetchone()
-    if not row:
-        return None
-
-    fields = [SchemaField(**f) for f in json.loads(row["fields"])]
-    return SavedSchema(
-        id=row["id"],
-        name=row["name"],
-        fields=fields,
-        created_at=row["created_at"],
-        updated_at=row["updated_at"],
-    )
-
-
-async def list_schemas(db: aiosqlite.Connection) -> list[SavedSchema]:
-    """List all saved schemas."""
-    cursor = await db.execute("SELECT * FROM schemas ORDER BY created_at DESC")
-    rows = await cursor.fetchall()
-
-    return [
-        SavedSchema(
-            id=row["id"],
-            name=row["name"],
-            fields=[SchemaField(**f) for f in json.loads(row["fields"])],
-            created_at=row["created_at"],
-            updated_at=row["updated_at"],
+    async with _get_session() as session:
+        result = await session.execute(
+            select(SchemaORM).where(SchemaORM.id == schema_id)
         )
-        for row in rows
-    ]
+        row = result.scalar_one_or_none()
+        if not row:
+            return None
+        fields = [SchemaField(**f) for f in json.loads(row.fields)]
+        return SavedSchema(
+            id=row.id, name=row.name, fields=fields,
+            created_at=row.created_at, updated_at=row.updated_at,
+        )
 
 
-async def delete_schema(db: aiosqlite.Connection, schema_id: str) -> bool:
+async def list_schemas(db) -> list[SavedSchema]:
+    """List all saved schemas."""
+    async with _get_session() as session:
+        result = await session.execute(
+            select(SchemaORM).order_by(SchemaORM.created_at.desc())
+        )
+        rows = result.scalars().all()
+        return [
+            SavedSchema(
+                id=r.id, name=r.name,
+                fields=[SchemaField(**f) for f in json.loads(r.fields)],
+                created_at=r.created_at, updated_at=r.updated_at,
+            )
+            for r in rows
+        ]
+
+
+async def delete_schema(db, schema_id: str) -> bool:
     """Delete a schema by ID. Returns True if deleted."""
-    cursor = await db.execute("DELETE FROM schemas WHERE id = ?", (schema_id,))
-    await db.commit()
-    return cursor.rowcount > 0
+    async with _get_session() as session:
+        result = await session.execute(
+            delete(SchemaORM).where(SchemaORM.id == schema_id)
+        )
+        await session.commit()
+        return result.rowcount > 0
 
 
 # Pre-defined schema templates
@@ -111,12 +131,12 @@ TEMPLATES: dict[str, list[dict]] = {
 }
 
 
-async def seed_templates(db: aiosqlite.Connection) -> None:
+async def seed_templates(db) -> None:
     """Seed default schema templates if they don't exist."""
     for name, fields_data in TEMPLATES.items():
-        cursor = await db.execute("SELECT id FROM schemas WHERE name = ?", (name,))
-        if await cursor.fetchone():
-            continue
-
-        schema = ExtractionSchema(fields=[SchemaField(**f) for f in fields_data])
-        await save_schema(db, name, schema)
+        async with _get_session() as session:
+            result = await session.execute(select(SchemaORM).where(SchemaORM.name == name))
+            exists = result.scalar_one_or_none() is not None
+        if not exists:
+            schema = ExtractionSchema(fields=[SchemaField(**f) for f in fields_data])
+            await save_schema(None, name, schema)
