@@ -7,7 +7,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from src.config import settings
-from src.database import get_connection, get_db_path, init_db
+from src.database import create_engine_from_url, get_connection, get_db_path, init_db
 from src.main import app
 
 
@@ -21,19 +21,26 @@ async def client():
 
 @pytest.fixture(autouse=True)
 async def _init_test_db(tmp_path):
-    """Initialize a temporary test database for each unit test."""
+    """Initialise a temporary test database for each test."""
     db_file = str(tmp_path / "test.db")
     original_url = settings.database_url
     original_upload = settings.upload_dir
 
-    settings.database_url = f"sqlite+aiosqlite:///{db_file}"
+    test_url = f"sqlite+aiosqlite:///{db_file}"
+    settings.database_url = test_url
     settings.upload_dir = str(tmp_path / "uploads")
 
     import os
     os.makedirs(settings.upload_dir, exist_ok=True)
 
+    # Initialise schema via raw migrations
     await init_db(db_file)
+
+    # Wire up SQLAlchemy engine so ORM services work in tests
+    create_engine_from_url(test_url)
+
     yield
+
     settings.database_url = original_url
     settings.upload_dir = original_upload
 
@@ -52,12 +59,10 @@ async def db_with_api_key():
 
     db = await get_connection(get_db_path(settings.database_url))
     try:
-        # Create workspace
         await db.execute(
             "INSERT INTO workspaces (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
             (workspace_id, f"test-ws-{workspace_id[:8]}", now, now),
         )
-        # Create API key
         await db.execute(
             """INSERT INTO api_keys (id, workspace_id, name, key_hash, key_prefix, created_at)
                VALUES (?, ?, ?, ?, ?, ?)""",
@@ -84,12 +89,10 @@ async def db_with_revoked_api_key():
 
     db = await get_connection(get_db_path(settings.database_url))
     try:
-        # Create workspace
         await db.execute(
             "INSERT INTO workspaces (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
             (workspace_id, f"test-ws-{workspace_id[:8]}", now, now),
         )
-        # Create revoked API key
         await db.execute(
             """INSERT INTO api_keys (id, workspace_id, name, key_hash, key_prefix, is_active, created_at)
                VALUES (?, ?, ?, ?, ?, 0, ?)""",

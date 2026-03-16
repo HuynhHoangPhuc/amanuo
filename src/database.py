@@ -1,12 +1,80 @@
-"""Async SQLite database setup and connection management."""
+"""Database setup: SQLAlchemy async engine + session factory.
+
+Keeps legacy get_connection() / init_db() interface for backward compatibility
+with existing test fixtures that use raw aiosqlite SQL.
+"""
 
 import hashlib
 import secrets
+from typing import AsyncGenerator
 
 import aiosqlite
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy import event, text
 
-# Default DB path (extracted from sqlite+aiosqlite:///./amanuo.db)
+# Default DB path
 _DB_PATH = "amanuo.db"
+
+# --- SQLAlchemy engine + session factory (module-level singletons) ---
+
+_engine = None
+_async_session_factory: async_sessionmaker | None = None
+
+
+def get_engine():
+    return _engine
+
+
+def create_engine_from_url(database_url: str):
+    """Initialise SQLAlchemy engine and session factory from a URL."""
+    global _engine, _async_session_factory
+
+    connect_args = {}
+    if "sqlite" in database_url:
+        connect_args = {"check_same_thread": False}
+
+    _engine = create_async_engine(
+        database_url,
+        echo=False,
+        connect_args=connect_args,
+    )
+
+    # Enable WAL mode for SQLite via connection event
+    if "sqlite" in database_url:
+        @event.listens_for(_engine.sync_engine, "connect")
+        def _set_sqlite_pragma(dbapi_conn, _):
+            cursor = dbapi_conn.cursor()
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+
+    _async_session_factory = async_sessionmaker(
+        _engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
+
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    """FastAPI dependency: yields an AsyncSession per request."""
+    if _async_session_factory is None:
+        raise RuntimeError("Database not initialised. Call create_engine_from_url() first.")
+    async with _async_session_factory() as session:
+        yield session
+
+
+def get_session_factory() -> async_sessionmaker:
+    """Return the session factory for use outside FastAPI Depends (e.g. workers)."""
+    if _async_session_factory is None:
+        raise RuntimeError("Database not initialised. Call create_engine_from_url() first.")
+    return _async_session_factory
+
+
+# --- Schema migrations (raw SQL, kept for init_db compatibility) ---
 
 _SCHEMA_VERSION = 2
 
@@ -47,7 +115,6 @@ _MIGRATIONS = {
         """,
     ],
     2: [
-        # -- Workspaces --
         """
         CREATE TABLE IF NOT EXISTS workspaces (
             id TEXT PRIMARY KEY,
@@ -56,7 +123,6 @@ _MIGRATIONS = {
             updated_at TEXT NOT NULL
         )
         """,
-        # -- Users (for session auth in Phase 2) --
         """
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
@@ -69,7 +135,6 @@ _MIGRATIONS = {
             updated_at TEXT NOT NULL
         )
         """,
-        # -- API Keys --
         """
         CREATE TABLE IF NOT EXISTS api_keys (
             id TEXT PRIMARY KEY,
@@ -82,7 +147,6 @@ _MIGRATIONS = {
             last_used_at TEXT
         )
         """,
-        # -- Pipelines (YAML config stored as TEXT) --
         """
         CREATE TABLE IF NOT EXISTS pipelines (
             id TEXT PRIMARY KEY,
@@ -96,7 +160,6 @@ _MIGRATIONS = {
             UNIQUE(workspace_id, name)
         )
         """,
-        # -- Batches --
         """
         CREATE TABLE IF NOT EXISTS batches (
             id TEXT PRIMARY KEY,
@@ -110,7 +173,6 @@ _MIGRATIONS = {
             completed_at TEXT
         )
         """,
-        # -- Batch Items (link batch -> job) --
         """
         CREATE TABLE IF NOT EXISTS batch_items (
             id TEXT PRIMARY KEY,
@@ -121,7 +183,6 @@ _MIGRATIONS = {
             status TEXT NOT NULL DEFAULT 'pending'
         )
         """,
-        # -- Webhooks --
         """
         CREATE TABLE IF NOT EXISTS webhooks (
             id TEXT PRIMARY KEY,
@@ -134,7 +195,6 @@ _MIGRATIONS = {
             updated_at TEXT NOT NULL
         )
         """,
-        # -- Webhook Deliveries (audit log) --
         """
         CREATE TABLE IF NOT EXISTS webhook_deliveries (
             id TEXT PRIMARY KEY,
@@ -149,7 +209,6 @@ _MIGRATIONS = {
             status TEXT NOT NULL DEFAULT 'pending'
         )
         """,
-        # -- Schema Versions --
         """
         CREATE TABLE IF NOT EXISTS schema_versions (
             id TEXT PRIMARY KEY,
@@ -161,17 +220,14 @@ _MIGRATIONS = {
             UNIQUE(schema_id, version)
         )
         """,
-        # -- Add workspace_id + batch_id + pipeline_id to jobs --
         "ALTER TABLE jobs ADD COLUMN workspace_id TEXT REFERENCES workspaces(id)",
         "ALTER TABLE jobs ADD COLUMN batch_id TEXT REFERENCES batches(id)",
         "ALTER TABLE jobs ADD COLUMN pipeline_id TEXT REFERENCES pipelines(id)",
-        # -- Add workspace_id + current_version to schemas --
         "ALTER TABLE schemas ADD COLUMN workspace_id TEXT REFERENCES workspaces(id)",
         "ALTER TABLE schemas ADD COLUMN current_version TEXT DEFAULT '1.0.0'",
     ],
 }
 
-# Post-migration seed SQL (run after migration 2 is applied)
 _SEED_DEFAULT_WORKSPACE = """
     INSERT OR IGNORE INTO workspaces (id, name, created_at, updated_at)
     VALUES ('default', 'Default Workspace', datetime('now'), datetime('now'))
@@ -180,7 +236,6 @@ _SEED_DEFAULT_WORKSPACE = """
 _BACKFILL_JOBS = "UPDATE jobs SET workspace_id = 'default' WHERE workspace_id IS NULL"
 _BACKFILL_SCHEMAS = "UPDATE schemas SET workspace_id = 'default' WHERE workspace_id IS NULL"
 
-# Indexes for frequently queried columns
 _INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_jobs_workspace ON jobs(workspace_id)",
     "CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status)",
@@ -198,7 +253,6 @@ _INDEXES = [
 
 def get_db_path(database_url: str) -> str:
     """Extract file path from sqlite URL."""
-    # "sqlite+aiosqlite:///./amanuo.db" -> "./amanuo.db"
     prefix = "sqlite+aiosqlite:///"
     if database_url.startswith(prefix):
         return database_url[len(prefix):]
@@ -206,7 +260,7 @@ def get_db_path(database_url: str) -> str:
 
 
 async def get_connection(db_path: str = _DB_PATH) -> aiosqlite.Connection:
-    """Get a database connection with WAL mode enabled."""
+    """Get a raw aiosqlite connection (legacy interface for tests and seed helpers)."""
     db = await aiosqlite.connect(db_path)
     db.row_factory = aiosqlite.Row
     await db.execute("PRAGMA journal_mode=WAL")
@@ -215,10 +269,9 @@ async def get_connection(db_path: str = _DB_PATH) -> aiosqlite.Connection:
 
 
 async def init_db(db_path: str = _DB_PATH) -> None:
-    """Run migrations to initialize/update the database schema."""
+    """Run migrations to initialise/update the database schema (legacy interface)."""
     db = await get_connection(db_path)
     try:
-        # Check current version
         current_version = 0
         try:
             cursor = await db.execute("SELECT MAX(version) FROM schema_version")
@@ -226,31 +279,39 @@ async def init_db(db_path: str = _DB_PATH) -> None:
             if row and row[0] is not None:
                 current_version = row[0]
         except aiosqlite.OperationalError:
-            pass  # Table doesn't exist yet
+            pass
 
-        # Apply pending migrations
         for version in sorted(_MIGRATIONS.keys()):
             if version > current_version:
                 for sql in _MIGRATIONS[version]:
-                    await db.execute(sql)
+                    try:
+                        await db.execute(sql)
+                    except aiosqlite.OperationalError as exc:
+                        # Ignore "duplicate column" errors from ALTER TABLE
+                        if "duplicate column" not in str(exc).lower():
+                            raise
                 await db.execute(
                     "INSERT OR REPLACE INTO schema_version (version) VALUES (?)",
                     (version,),
                 )
 
-        # Post-migration seeding and backfill (idempotent)
         if current_version < 2:
             await db.execute(_SEED_DEFAULT_WORKSPACE)
             await db.execute(_BACKFILL_JOBS)
             await db.execute(_BACKFILL_SCHEMAS)
             for idx_sql in _INDEXES:
                 await db.execute(idx_sql)
-            # Generate default API key for Gradio UI / backward compat
             await _seed_default_api_key(db)
 
         await db.commit()
     finally:
         await db.close()
+
+    # Also synchronise the SQLAlchemy engine if it has been initialised so that
+    # the same on-disk database is visible to ORM sessions.
+    if _engine is not None and "sqlite" in str(_engine.url):
+        # Nothing extra needed — the engine and aiosqlite both target the same file.
+        pass
 
 
 async def _seed_default_api_key(db: aiosqlite.Connection) -> None:
@@ -259,7 +320,7 @@ async def _seed_default_api_key(db: aiosqlite.Connection) -> None:
         "SELECT id FROM api_keys WHERE workspace_id = 'default' AND name = 'Default Key'"
     )
     if await cursor.fetchone():
-        return  # Already seeded
+        return
 
     raw_key = secrets.token_urlsafe(32)
     key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
@@ -271,7 +332,6 @@ async def _seed_default_api_key(db: aiosqlite.Connection) -> None:
         (key_hash, key_prefix),
     )
 
-    # Print key to stdout so operator can capture it on first run
     print(f"\n{'='*60}")
     print(f"  DEFAULT API KEY (shown once): {raw_key}")
     print(f"  Prefix: {key_prefix}")
