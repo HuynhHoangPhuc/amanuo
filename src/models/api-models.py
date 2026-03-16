@@ -53,3 +53,29 @@ class SchemaResponse(BaseModel):
     version: str = "1.0.0"
     created_at: str
     updated_at: str
+
+
+class SuggestedField(BaseModel):
+    label: str
+    type: str  # text, number, date, boolean
+    occurrence: str
+    confidence: float
+
+
+class SuggestSchemaResponse(BaseModel):
+    fields: list[SuggestedField]
+    warning: str
+    beta: bool = True
+
+
+class SchemaTemplateResponse(BaseModel):
+    id: str
+    name: str
+    description: str
+    category: str
+    fields: list[dict]
+    languages: list[str]
+    is_curated: bool
+    usage_count: int
+    version: str
+    created_at: str

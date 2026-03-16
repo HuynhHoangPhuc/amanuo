@@ -1,0 +1,103 @@
+# Curated schema templates for the Amanuo template marketplace
+templates:
+  - name: "Invoice (English)"
+    category: invoice
+    languages: [en]
+    description: "Standard English invoice: number, dates, vendor, line items, totals"
+    fields:
+      - label: invoice_number
+        type: text
+        occurrence: required once
+      - label: invoice_date
+        type: date
+        occurrence: required once
+      - label: due_date
+        type: date
+        occurrence: optional once
+      - label: vendor_name
+        type: text
+        occurrence: required once
+      - label: vendor_address
+        type: text
+        occurrence: optional once
+      - label: total_amount
+        type: number
+        occurrence: required once
+      - label: tax_amount
+        type: number
+        occurrence: optional once
+      - label: currency
+        type: text
+        occurrence: optional once
+      - label: line_items
+        type: text
+        occurrence: optional multiple
+
+  - name: "Invoice (Japanese)"
+    category: invoice
+    languages: [ja]
+    description: "Japanese invoice (請求書): number, dates, company, amounts"
+    fields:
+      - label: invoice_number
+        type: text
+        occurrence: required once
+      - label: invoice_date
+        type: date
+        occurrence: required once
+      - label: company_name
+        type: text
+        occurrence: required once
+      - label: total_amount
+        type: number
+        occurrence: required once
+      - label: tax_amount
+        type: number
+        occurrence: optional once
+
+  - name: "Receipt"
+    category: receipt
+    languages: [en, ja, vi]
+    description: "General receipt: merchant, date, items, total"
+    fields:
+      - label: merchant_name
+        type: text
+        occurrence: required once
+      - label: transaction_date
+        type: date
+        occurrence: required once
+      - label: total_amount
+        type: number
+        occurrence: required once
+      - label: tax_amount
+        type: number
+        occurrence: optional once
+      - label: payment_method
+        type: text
+        occurrence: optional once
+      - label: items
+        type: text
+        occurrence: optional multiple
+
+  - name: "ID Card"
+    category: identity
+    languages: [en, ja, vi]
+    description: "Identity document: name, birth date, ID number, address"
+    fields:
+      - label: full_name
+        type: text
+        occurrence: required once
+      - label: date_of_birth
+        type: date
+        occurrence: required once
+      - label: id_number
+        type: text
+        occurrence: required once
+      - label: nationality
+        type: text
+        occurrence: optional once
+      - label: expiry_date
+        type: date
+        occurrence: optional once
+      - label: address
+        type: text
+        occurrence: optional once
