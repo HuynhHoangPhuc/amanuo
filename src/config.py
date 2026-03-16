@@ -2,6 +2,7 @@
 
 from typing import Literal
 
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
@@ -27,8 +28,13 @@ class Settings(BaseSettings):
     # Auth
     jwt_secret: str = ""  # Set in .env for production; auto-generated if empty
 
-    # Redis (optional, for future Celery queue)
+    # Redis / ARQ job queue
     redis_url: str = "redis://localhost:6379/0"
+    broadcaster_url: str = Field(default="redis://localhost:6379/0")
+    arq_max_jobs: int = Field(default=3)
+    arq_job_timeout: int = Field(default=300)
+    arq_max_retries: int = Field(default=3)
+    arq_retry_delay: int = Field(default=60)
 
     # Upload storage
     upload_dir: str = "data/uploads"
@@ -40,6 +46,11 @@ class Settings(BaseSettings):
     watch_batch_window_seconds: int = 5
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+
+
+def get_settings() -> "Settings":
+    """Return the global settings instance."""
+    return settings
 
 
 settings = Settings()

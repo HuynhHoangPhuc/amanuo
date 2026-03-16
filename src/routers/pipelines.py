@@ -5,10 +5,10 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select, update
 
-from src.config import settings
-from src.database import get_connection, get_db_path
-from src.models.pipeline import PipelineCreateRequest, PipelineResponse, PipelineUpdateRequest
+from src.database import get_session_factory
+from src.models.pipeline import PipelineORM, PipelineCreateRequest, PipelineResponse, PipelineUpdateRequest
 
 _auth = importlib.import_module("src.middleware.auth-middleware")
 _pipeline_config = importlib.import_module("src.engine.pipeline-config")
@@ -18,21 +18,20 @@ get_workspace_id = _auth.get_workspace_id
 router = APIRouter(prefix="/pipelines", tags=["pipelines"])
 
 
-async def _get_db():
-    return await get_connection(get_db_path(settings.database_url))
+def _get_session():
+    return get_session_factory()()
 
 
-def _row_to_response(row) -> PipelineResponse:
-    """Convert a SQLite Row to a PipelineResponse model."""
+def _orm_to_response(row: PipelineORM) -> PipelineResponse:
     return PipelineResponse(
-        id=row["id"],
-        workspace_id=row["workspace_id"],
-        name=row["name"],
-        description=row["description"],
-        config=row["config"],
-        is_active=bool(row["is_active"]),
-        created_at=row["created_at"],
-        updated_at=row["updated_at"],
+        id=row.id,
+        workspace_id=row.workspace_id,
+        name=row.name,
+        description=row.description,
+        config=row.config,
+        is_active=bool(row.is_active),
+        created_at=row.created_at,
+        updated_at=row.updated_at,
     )
 
 
@@ -41,12 +40,7 @@ async def create_pipeline(
     req: PipelineCreateRequest,
     workspace_id: str = Depends(get_workspace_id),
 ):
-    """Create a new pipeline for the current workspace.
-
-    Validates the YAML config before persisting. Returns 400 if YAML is invalid,
-    409 if a pipeline with the same name already exists in this workspace.
-    """
-    # Validate YAML before saving
+    """Create a new pipeline. Validates YAML before persisting."""
     try:
         config = _pipeline_config.parse_pipeline_yaml(req.config)
     except (ValueError, Exception) as exc:
@@ -54,50 +48,45 @@ async def create_pipeline(
 
     warnings = _pipeline_config.validate_pipeline(config)
     if warnings:
-        # Log warnings but don't block creation — unknown step types are caught here
         import logging
         logging.getLogger(__name__).warning("Pipeline warnings: %s", warnings)
 
     pipeline_id = str(uuid.uuid4())
     now = datetime.now().isoformat()
 
-    db = await _get_db()
     try:
-        await db.execute(
-            """INSERT INTO pipelines (id, workspace_id, name, description, config, is_active, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, 1, ?, ?)""",
-            (pipeline_id, workspace_id, req.name, req.description, req.config, now, now),
-        )
-        await db.commit()
-
-        cursor = await db.execute(
-            "SELECT * FROM pipelines WHERE id = ?", (pipeline_id,)
-        )
-        row = await cursor.fetchone()
-        return _row_to_response(row)
+        async with _get_session() as session:
+            pipeline = PipelineORM(
+                id=pipeline_id,
+                workspace_id=workspace_id,
+                name=req.name,
+                description=req.description,
+                config=req.config,
+                is_active=1,
+                created_at=now,
+                updated_at=now,
+            )
+            session.add(pipeline)
+            await session.commit()
+            await session.refresh(pipeline)
+            return _orm_to_response(pipeline)
     except Exception as exc:
         if "UNIQUE constraint" in str(exc):
-            raise HTTPException(
-                409, f"Pipeline '{req.name}' already exists in this workspace"
-            ) from exc
+            raise HTTPException(409, f"Pipeline '{req.name}' already exists in this workspace") from exc
         raise
-    finally:
-        await db.close()
 
 
 @router.get("", response_model=list[PipelineResponse])
 async def list_pipelines(workspace_id: str = Depends(get_workspace_id)):
     """List all active pipelines for the current workspace."""
-    db = await _get_db()
-    try:
-        cursor = await db.execute(
-            "SELECT * FROM pipelines WHERE workspace_id = ? AND is_active = 1 ORDER BY created_at DESC",
-            (workspace_id,),
+    async with _get_session() as session:
+        result = await session.execute(
+            select(PipelineORM)
+            .where(PipelineORM.workspace_id == workspace_id, PipelineORM.is_active == 1)
+            .order_by(PipelineORM.created_at.desc())
         )
-        rows = await cursor.fetchall()
-        return [_row_to_response(r) for r in rows]
-    finally:
-        await db.close()
+        rows = result.scalars().all()
+        return [_orm_to_response(r) for r in rows]
 
 
 @router.get("/{pipeline_id}", response_model=PipelineResponse)
@@ -106,18 +95,16 @@ async def get_pipeline(
     workspace_id: str = Depends(get_workspace_id),
 ):
     """Get a single pipeline by ID (must belong to the current workspace)."""
-    db = await _get_db()
-    try:
-        cursor = await db.execute(
-            "SELECT * FROM pipelines WHERE id = ? AND workspace_id = ?",
-            (pipeline_id, workspace_id),
+    async with _get_session() as session:
+        result = await session.execute(
+            select(PipelineORM).where(
+                PipelineORM.id == pipeline_id, PipelineORM.workspace_id == workspace_id
+            )
         )
-        row = await cursor.fetchone()
+        row = result.scalar_one_or_none()
         if not row:
             raise HTTPException(404, f"Pipeline {pipeline_id} not found")
-        return _row_to_response(row)
-    finally:
-        await db.close()
+        return _orm_to_response(row)
 
 
 @router.put("/{pipeline_id}", response_model=PipelineResponse)
@@ -126,47 +113,43 @@ async def update_pipeline(
     req: PipelineUpdateRequest,
     workspace_id: str = Depends(get_workspace_id),
 ):
-    """Update pipeline name, description, and/or config YAML.
+    """Update pipeline name, description, and/or config YAML."""
+    if req.config is not None:
+        try:
+            _pipeline_config.parse_pipeline_yaml(req.config)
+        except (ValueError, Exception) as exc:
+            raise HTTPException(400, f"Invalid pipeline config: {exc}") from exc
 
-    Only provided fields are updated. Returns 400 if the new YAML is invalid,
-    404 if the pipeline doesn't exist in this workspace.
-    """
-    db = await _get_db()
-    try:
-        cursor = await db.execute(
-            "SELECT * FROM pipelines WHERE id = ? AND workspace_id = ?",
-            (pipeline_id, workspace_id),
+    async with _get_session() as session:
+        result = await session.execute(
+            select(PipelineORM).where(
+                PipelineORM.id == pipeline_id, PipelineORM.workspace_id == workspace_id
+            )
         )
-        row = await cursor.fetchone()
+        row = result.scalar_one_or_none()
         if not row:
             raise HTTPException(404, f"Pipeline {pipeline_id} not found")
 
-        # Validate new config if provided
-        if req.config is not None:
-            try:
-                _pipeline_config.parse_pipeline_yaml(req.config)
-            except (ValueError, Exception) as exc:
-                raise HTTPException(400, f"Invalid pipeline config: {exc}") from exc
-
         now = datetime.now().isoformat()
-        new_name = req.name if req.name is not None else row["name"]
-        new_description = req.description if req.description is not None else row["description"]
-        new_config = req.config if req.config is not None else row["config"]
+        values = {"updated_at": now}
+        if req.name is not None:
+            values["name"] = req.name
+        if req.description is not None:
+            values["description"] = req.description
+        if req.config is not None:
+            values["config"] = req.config
 
-        await db.execute(
-            """UPDATE pipelines SET name = ?, description = ?, config = ?, updated_at = ?
-               WHERE id = ? AND workspace_id = ?""",
-            (new_name, new_description, new_config, now, pipeline_id, workspace_id),
+        await session.execute(
+            update(PipelineORM).where(PipelineORM.id == pipeline_id).values(**values)
         )
-        await db.commit()
+        await session.commit()
 
-        cursor = await db.execute(
-            "SELECT * FROM pipelines WHERE id = ?", (pipeline_id,)
+        # Reload updated row
+        result = await session.execute(
+            select(PipelineORM).where(PipelineORM.id == pipeline_id)
         )
-        updated = await cursor.fetchone()
-        return _row_to_response(updated)
-    finally:
-        await db.close()
+        updated = result.scalar_one()
+        return _orm_to_response(updated)
 
 
 @router.delete("/{pipeline_id}")
@@ -174,25 +157,21 @@ async def deactivate_pipeline(
     pipeline_id: str,
     workspace_id: str = Depends(get_workspace_id),
 ):
-    """Deactivate a pipeline (soft delete — sets is_active = 0).
-
-    Returns 404 if the pipeline doesn't exist in this workspace.
-    """
-    db = await _get_db()
-    try:
-        cursor = await db.execute(
-            "SELECT id FROM pipelines WHERE id = ? AND workspace_id = ?",
-            (pipeline_id, workspace_id),
+    """Soft-delete a pipeline (sets is_active = 0)."""
+    async with _get_session() as session:
+        result = await session.execute(
+            select(PipelineORM).where(
+                PipelineORM.id == pipeline_id, PipelineORM.workspace_id == workspace_id
+            )
         )
-        if not await cursor.fetchone():
+        if not result.scalar_one_or_none():
             raise HTTPException(404, f"Pipeline {pipeline_id} not found")
 
         now = datetime.now().isoformat()
-        await db.execute(
-            "UPDATE pipelines SET is_active = 0, updated_at = ? WHERE id = ? AND workspace_id = ?",
-            (now, pipeline_id, workspace_id),
+        await session.execute(
+            update(PipelineORM)
+            .where(PipelineORM.id == pipeline_id, PipelineORM.workspace_id == workspace_id)
+            .values(is_active=0, updated_at=now)
         )
-        await db.commit()
+        await session.commit()
         return {"deactivated": True, "id": pipeline_id}
-    finally:
-        await db.close()

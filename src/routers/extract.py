@@ -73,17 +73,9 @@ async def extract(
         pipeline_id=pipeline_id,
     )
 
-    # Save uploaded file
+    # Save uploaded file and update job record
     file_path = await _job_service.save_upload(content, file.filename or "upload.png", job_id)
-
-    # Update job with file path
-    from src.database import get_connection, get_db_path
-    db = await get_connection(get_db_path(settings.database_url))
-    try:
-        await db.execute("UPDATE jobs SET input_file = ? WHERE id = ?", (file_path, job_id))
-        await db.commit()
-    finally:
-        await db.close()
+    await _job_service.update_job_input_file(job_id, file_path)
 
     # Enqueue for processing
     await _worker.enqueue_job(job_id)

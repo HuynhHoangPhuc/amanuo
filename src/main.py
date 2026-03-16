@@ -1,14 +1,19 @@
 """FastAPI application entry point."""
 
 import importlib
+import logging
+import uuid
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import settings
-from src.database import get_connection, get_db_path, init_db
+from src.database import create_engine_from_url, get_db_path, get_engine, init_db
 from src.routers import health
 from src.routers.extract import router as extract_router
 from src.routers.jobs import router as jobs_router
@@ -23,45 +28,66 @@ _webhooks_router = importlib.import_module("src.routers.webhooks")
 _webhook_delivery = importlib.import_module("src.services.webhook-delivery")
 _pipeline_config = importlib.import_module("src.engine.pipeline-config")
 
-# Batch processing (imported later when Phase 4 is ready)
 _batch_router = None
 _folder_watcher = None
 try:
     _batch_router = importlib.import_module("src.routers.batch")
     _folder_watcher = importlib.import_module("src.services.folder-watcher")
 except ModuleNotFoundError:
-    pass  # Phase 4 not yet implemented
+    pass
+
+_templates_router = importlib.import_module("src.routers.templates")
+_template_svc = importlib.import_module("src.services.template-service")
 
 _watcher_task = None
 _delivery_worker_task = None
 _retry_checker_task = None
 
+_redis_pool = importlib.import_module("src.services.redis-pool")
+_event_broadcaster = importlib.import_module("src.services.event-broadcaster")
+_ws_events_router = importlib.import_module("src.routers.websocket-events")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize database, seed templates, start workers on startup."""
+    """Initialise database, Redis, seed templates, start workers on startup."""
     global _watcher_task, _delivery_worker_task, _retry_checker_task
 
+    # 1. Initialise SQLAlchemy engine (must happen before any service calls)
+    create_engine_from_url(settings.database_url)
+
+    # 2. Run raw-SQL migrations (creates tables + seeds default workspace/key)
     db_path = get_db_path(settings.database_url)
     await init_db(db_path)
     Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
 
-    # Seed schema templates + default pipeline
-    db = await get_connection(db_path)
+    # 3. Connect to Redis for ARQ job queue (graceful degradation if unavailable)
     try:
-        await _store.seed_templates(db)
-        await _seed_default_pipeline(db)
-    finally:
-        await db.close()
+        await _redis_pool.init_redis(settings.redis_url)
+        logger.info("Redis connected — using ARQ job queue")
+    except Exception as e:
+        logger.warning("Redis unavailable (%s) — using in-memory queue (jobs not persistent)", e)
 
-    # Start background extraction workers
+    # 3b. Connect broadcaster for WebSocket events (graceful degradation if unavailable)
+    try:
+        await _event_broadcaster.init_broadcaster(settings.broadcaster_url)
+    except Exception as e:
+        logger.warning("Broadcaster unavailable (%s) — WebSocket in no-broadcast mode", e)
+
+    # 4. Seed schema templates + default pipeline via ORM services
+    await _store.seed_templates(None)
+    await _seed_default_pipeline()
+
+    # 5. Seed curated schema marketplace templates (idempotent)
+    from src.database import get_session_factory
+    async with get_session_factory()() as session:
+        await _template_svc.seed_curated_templates(session)
+
+    # 6. Start fallback in-memory workers (drain queue when Redis unavailable)
     _worker.start_workers(count=settings.max_workers)
-
-    # Start webhook delivery worker + retry checker
     _delivery_worker_task = _webhook_delivery.start_delivery_worker()
     _retry_checker_task = _webhook_delivery.start_retry_checker()
 
-    # Start folder watcher if configured
     if _folder_watcher and settings.watch_dir:
         _watcher_task = await _folder_watcher.start_folder_watcher(settings)
 
@@ -76,26 +102,44 @@ async def lifespan(app: FastAPI):
     if _watcher_task and _folder_watcher:
         _folder_watcher.stop_folder_watcher(_watcher_task)
 
+    await _event_broadcaster.shutdown_broadcaster()
+    await _redis_pool.close_redis()
 
-async def _seed_default_pipeline(db) -> None:
+    engine = get_engine()
+    if engine:
+        await engine.dispose()
+
+
+async def _seed_default_pipeline() -> None:
     """Seed the default pipeline if it doesn't exist."""
-    cursor = await db.execute(
-        "SELECT id FROM pipelines WHERE workspace_id = 'default' AND name = 'default'"
-    )
-    if await cursor.fetchone():
-        return
+    from sqlalchemy import select
+    from src.database import get_session_factory
+    from src.models.pipeline import PipelineORM
 
-    import uuid
-    from datetime import datetime
+    async with get_session_factory()() as session:
+        result = await session.execute(
+            select(PipelineORM).where(
+                PipelineORM.workspace_id == "default",
+                PipelineORM.name == "default",
+            )
+        )
+        if result.scalar_one_or_none():
+            return
 
-    pipeline_id = str(uuid.uuid4())
-    now = datetime.now().isoformat()
-    await db.execute(
-        """INSERT INTO pipelines (id, workspace_id, name, description, config, created_at, updated_at)
-           VALUES (?, 'default', 'default', 'Default extraction pipeline', ?, ?, ?)""",
-        (pipeline_id, _pipeline_config.DEFAULT_PIPELINE_YAML, now, now),
-    )
-    await db.commit()
+        pipeline_id = str(uuid.uuid4())
+        now = datetime.now().isoformat()
+        pipeline = PipelineORM(
+            id=pipeline_id,
+            workspace_id="default",
+            name="default",
+            description="Default extraction pipeline",
+            config=_pipeline_config.DEFAULT_PIPELINE_YAML,
+            is_active=1,
+            created_at=now,
+            updated_at=now,
+        )
+        session.add(pipeline)
+        await session.commit()
 
 
 app = FastAPI(
@@ -113,21 +157,19 @@ app.add_middleware(
     allow_credentials=True,
 )
 
-# Existing routers
 app.include_router(health.router)
 app.include_router(extract_router)
 app.include_router(jobs_router)
 app.include_router(schemas_router)
-
-# New routers (Phase 2+)
 app.include_router(_auth_router.router)
 app.include_router(_workspaces_router.router)
 app.include_router(_pipelines_router.router)
 app.include_router(_webhooks_router.router)
 if _batch_router:
     app.include_router(_batch_router.router)
+app.include_router(_templates_router.router)
+app.include_router(_ws_events_router.router)
 
-# Mount Gradio UI
 try:
     import gradio as gr
 
@@ -135,4 +177,4 @@ try:
     demo = _gradio_app.create_ui()
     app = gr.mount_gradio_app(app, demo, path="/ui")
 except ImportError:
-    pass  # Gradio not installed — API-only mode
+    pass

@@ -68,13 +68,7 @@ async def create_batch(
         file_path = await _job_service.save_upload(content, file.filename or f"batch_{idx}.png", job_id)
 
         # Update job with file path
-        from src.database import get_connection, get_db_path
-        db = await get_connection(get_db_path(settings.database_url))
-        try:
-            await db.execute("UPDATE jobs SET input_file = ? WHERE id = ?", (file_path, job_id))
-            await db.commit()
-        finally:
-            await db.close()
+        await _job_service.update_job_input_file(job_id, file_path)
 
         # Link to batch
         await _batch_service.add_batch_item(batch_id, job_id, file.filename, idx)
