@@ -34,3 +34,7 @@ htmlcov/
 
 # Benchmarks
 tests/benchmarks/results/*.json
+
+# Local plans & Claude config
+plans/
+.claude/
