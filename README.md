@@ -17,7 +17,11 @@ Amanuo extracts structured data from documents using user-defined schemas. It ro
 - Schema-driven extraction (JSON/CSV format)
 - Dual-pipeline execution (local + cloud with fallback)
 - Cost tracking and confidence scoring
-- 204 unit & E2E tests (6.5s execution)
+- Human-in-the-loop review & correction system
+- Accuracy tracking dashboard with per-field metrics
+- Schema auto-suggest & template marketplace
+- WebSocket real-time job/batch updates
+- ~106 test functions across 28 test files (~5,100 LOC), ~7.2s execution
 
 ## Quick Start
 
@@ -49,80 +53,66 @@ npm run dev
 # Open http://localhost:3000
 ```
 
-## API Endpoints (39 Total)
+## API Endpoints (45+)
 
 **Authentication & Authorization**
 
-| Method | Endpoint | Purpose |
-|---|---|---|
-| POST | `/auth/register` | User registration |
-| POST | `/auth/login` | User login (JWT + refresh tokens) |
-| POST | `/auth/logout` | Logout & token revocation |
-
-**Workspaces (Multi-Tenancy)**
-
-| Method | Endpoint | Purpose |
-|---|---|---|
-| GET | `/workspaces` | List user's workspaces |
-| POST | `/workspaces` | Create workspace |
-| DELETE | `/workspaces/{id}` | Delete workspace |
-
-**API Keys**
-
-| Method | Endpoint | Purpose |
-|---|---|---|
+| POST | `/auth/register`, `/login`, `/logout` | User registration, login, logout |
 | GET | `/api-keys` | List API keys |
 | POST | `/api-keys` | Generate new API key (SHA256 hashed) |
 | DELETE | `/api-keys/{id}` | Revoke API key |
 
-**Extraction (Core)**
+**Workspaces & Extraction**
 
-| Method | Endpoint | Purpose |
-|---|---|---|
+| GET | `/workspaces` | List workspaces |
 | POST | `/extract` | Single file extraction (202 Accepted) |
-| GET | `/jobs` | List jobs in workspace |
-| GET | `/jobs/{id}` | Get job status & results |
-| GET | `/schemas` | List saved schema templates |
-| POST | `/schemas` | Create new schema template |
+| POST | `/extract/batch` | Multi-file upload (202 Accepted) |
+| GET | `/jobs` | List jobs |
+| GET | `/jobs/{id}` | Job status & results |
+| GET | `/jobs/{id}/document` | Serve extracted document (path traversal protected) |
+| GET | `/batches` | List batches |
+| GET | `/batches/{id}` | Batch status & progress |
+| POST | `/batches/{id}/cancel` | Cancel batch |
+
+**Schemas & Versioning**
+
+| GET | `/schemas` | List schemas |
+| POST | `/schemas` | Create schema |
 | GET | `/schemas/{id}` | Get schema details |
 | PUT | `/schemas/{id}` | Update schema |
 | DELETE | `/schemas/{id}` | Delete schema |
 | GET | `/schemas/{id}/versions` | Schema version history |
+| POST | `/schemas/suggest` | Auto-suggest schema fields from document |
 
-**Batch Processing**
+**Templates & Marketplace**
 
-| Method | Endpoint | Purpose |
-|---|---|---|
-| POST | `/extract/batch` | Multi-file upload (202 Accepted) |
-| GET | `/batches` | List batches |
-| GET | `/batches/{id}` | Get batch status & progress |
-| POST | `/batches/{id}/cancel` | Cancel batch |
+| GET | `/templates` | List curated templates (4 built-in) |
+| POST | `/templates/{id}/import` | Import template as new schema |
 
-**Pipelines (YAML Config)**
+**Reviews & Accuracy**
 
-| Method | Endpoint | Purpose |
-|---|---|---|
+| GET | `/reviews` | List reviews in workspace |
+| POST | `/reviews/{job_id}` | Submit review corrections |
+| GET | `/reviews/{job_id}` | Get review details |
+| GET | `/accuracy/{schema_id}` | Get accuracy metrics per schema |
+| POST | `/accuracy/{schema_id}/compute` | Compute accuracy metrics |
+
+**Pipelines & Webhooks**
+
 | GET | `/pipelines` | List pipelines |
 | POST | `/pipelines` | Create pipeline (YAML config) |
-| GET | `/pipelines/{id}` | Get pipeline details |
 | PUT | `/pipelines/{id}` | Update pipeline |
 | DELETE | `/pipelines/{id}` | Delete pipeline |
-
-**Webhooks (Event-Driven)**
-
-| Method | Endpoint | Purpose |
-|---|---|---|
 | GET | `/webhooks` | List webhook endpoints |
-| POST | `/webhooks` | Register webhook (event types: job.*, batch.*) |
+| POST | `/webhooks` | Register webhook |
 | DELETE | `/webhooks/{id}` | Delete webhook |
 | POST | `/webhooks/{id}/test` | Send test event |
 | GET | `/webhooks/{id}/deliveries` | View delivery log with retry status |
 
-**System**
+**System & Real-Time**
 
-| Method | Endpoint | Purpose |
-|---|---|---|
 | GET | `/health` | Liveness + provider availability |
+| GET | `/ws/events` | WebSocket stream (real-time job/batch updates, 30s heartbeat) |
 
 ### Example: Authenticate & Extract
 
@@ -229,13 +219,13 @@ docker-compose up
 ## Running Tests
 
 ```bash
-# All 204 tests (6.5s total)
+# All tests (~106 test functions, ~7.2s total)
 uv run pytest
 
 # Unit tests only (fastest)
 uv run pytest -m unit
 
-# Integration tests (requires Ollama/cloud APIs)
+# Integration tests (requires Ollama/cloud APIs, skipped in CI)
 uv run pytest -m integration
 
 # End-to-end tests (full workflows)
@@ -265,22 +255,21 @@ uv run pytest --cov=src --cov-report=html
 
 ## Roadmap
 
-**Phase 1 (Complete)**
-- [x] Multi-workspace platform with soft multi-tenancy
-- [x] API key authentication + JWT sessions
-- [x] Batch processing (multi-file upload)
-- [x] Pipeline engine with YAML config
-- [x] Webhook system with retry backoff
-- [x] Schema versioning & migration
-- [x] TanStack frontend (React 19)
+**Completed Phases (1–6)**
+- [x] Phase 1: Core OCR extraction + multi-workspace platform
+- [x] Phase 2: SQLAlchemy ORM migration + Redis/ARQ job queue
+- [x] Phase 3: WebSocket real-time events + template marketplace
+- [x] Phase 4: Human-in-the-loop review & correction UI
+- [x] Phase 5: Accuracy tracking + prompt hint generation
+- [x] Phase 6: Full TanStack React frontend + schema auto-suggest
 
-**Phase 2 (Upcoming)**
+**Future Work (Phase 7+)**
 - [ ] Fine-tuning pipeline for custom models
-- [ ] Redis queue for production scaling
-- [ ] PostgreSQL support for larger deployments
-- [ ] Real-time WebSocket updates for job status
-- [ ] Advanced analytics & usage tracking
+- [ ] PostgreSQL multi-node support
+- [ ] Advanced analytics & cost tracking per workspace
 - [ ] Document classification pre-processor
+- [ ] OAuth / social authentication
+- [ ] Multi-reviewer approval chains
 
 ## License
 

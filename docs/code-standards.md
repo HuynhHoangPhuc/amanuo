@@ -479,6 +479,17 @@ def validate_schema(fields: list[dict]) -> None:
 - Provider availability checked once per worker startup
 - Cost calculations cached per provider
 
+## SQLAlchemy ORM Patterns
+
+**Async Session Management** — Use `AsyncSession` with dependency injection in routers. All queries with `session.execute()` must be awaited. ORM models use `Mapped` type hints with `mapped_column()` for type safety.
+
+**ORM Model Best Practices:**
+- Inherit from `Base` and `TimestampMixin` for `created_at`/`updated_at`
+- Use parameterized queries (prevent SQL injection)
+- All table operations via ORM (no raw SQL except migrations)
+
+See `/docs/advanced-patterns.md` for detailed SQLAlchemy, ARQ, WebSocket, review, accuracy, and template patterns.
+
 ## Pre-Commit Checklist
 
 Before committing Python code:

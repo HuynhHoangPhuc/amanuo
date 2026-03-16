@@ -92,10 +92,10 @@ Amanuo is an adaptive hybrid OCR system for **structured document extraction** a
 - Build: 1831+ modules, 17+ chunks, 0 errors
 
 **Testing**
-- 313 tests (increase from 204 → 243 → 313), 148 unit + 56 E2E + 109 new
-- New tests: review CRUD, accuracy computation, prompt hints, document serving, batch review UX
-- Execution time: ~7.2s
+- ~106 test functions across 28 test files (~5,100 LOC)
+- 20 unit test files + 8 E2E test files
 - Coverage: auth, batch, pipeline, webhook, workspace, schema versioning, job queue, events, review, accuracy
+- Execution time: ~7.2s
 
 ### Out-of-Scope (Phase 7+)
 - Fine-tuning or model training
@@ -158,26 +158,26 @@ Auth (API Key/JWT) → Workspace Scoping →
 
 ## Acceptance Criteria
 
-- [x] All 313 tests passing (148 unit + 56 E2E + 109 new), ~7.2s execution
-- [x] REST API (42+ endpoints) functional with documented requests/responses
-- [x] Authentication: API key + JWT working, workspace isolation enforced
-- [x] Batch processing: multi-file upload, atomic status tracking, cancellation
-- [x] Pipeline engine: YAML parsing, executor, step registry, default pipeline
-- [x] Webhook system: event subscription, HMAC signing, retry backoff
-- [x] Schema versioning: semver auto-bump, compatibility checks, migration tracking
-- [x] **SQLAlchemy ORM** with async sessions, migrations (alembic)
-- [x] **ARQ Job Queue** with Redis backend, standalone worker process
-- [x] **WebSocket Events** (Redis pub/sub) for real-time job/batch updates
-- [x] **Human-in-the-Loop Review** system with side-by-side + batch table views
-- [x] **Review API** with document serving (path traversal protection)
-- [x] **Prompt Hints** auto-generated from correction patterns
-- [x] **Accuracy Dashboard** with per-schema metrics over time
-- [x] **Schema Suggest** using VLM, graceful degradation
-- [x] **Template Marketplace** with 4 curated templates + import
-- [x] Frontend: TanStack React app, all workflows (jobs, batches, pipelines, webhooks, templates, reviews, accuracy, WebSocket)
-- [x] Cost tracking accurate for cloud providers
-- [x] Local fallback works when VLM unavailable
-- [x] Documentation complete (API, architecture, code standards, codebase summary)
+- [x] ~106 test functions (~7.2s execution) covering core workflows
+- [x] REST API (45+ endpoints) fully functional and documented
+- [x] Authentication: API key (SHA256) + JWT (HS256) validated, workspace isolation enforced
+- [x] Batch processing: multi-file upload, atomic counters, cancellation support
+- [x] Pipeline engine: YAML parsing, sequential executor, 4 step types (preprocess, extract, validate, export)
+- [x] Webhook system: event subscription, HMAC-SHA256 signing, 4-attempt retry backoff [60s, 5m, 30m, 2h]
+- [x] Schema versioning: semver auto-bump (major/minor/patch), backward compatibility checks
+- [x] **SQLAlchemy ORM** — 15 tables, async sessions, alembic migrations
+- [x] **ARQ Job Queue** — Redis backend with asyncio.Queue fallback, standalone worker
+- [x] **WebSocket Events** — Redis pub/sub, /ws/events endpoint, 30s heartbeat, job/batch updates
+- [x] **HITL Review System** — side-by-side document viewer, field-level corrections, per-job reviews
+- [x] **Review API** — GET /reviews, POST /reviews/{job_id}, document serving with path traversal protection
+- [x] **Prompt Hints** — auto-generated from correction patterns, injected into VLM prompts
+- [x] **Accuracy Dashboard** — per-schema metrics, field-level breakdown, time-series tracking
+- [x] **Schema Suggest** — VLM-based field suggestion, graceful degradation on unavailable VLM
+- [x] **Template Marketplace** — 4 curated templates (Invoice EN/JP, Receipt, ID Card), import support
+- [x] **Frontend (React 19)** — TanStack Router/Query, all workflows, WebSocket real-time updates
+- [x] **Cost tracking** — accurate token counts & USD estimates for Gemini/Mistral
+- [x] **Local fallback** — Ollama/vLLM → PaddleOCR → cloud, graceful degradation on all failures
+- [x] **Documentation** — README, PDR, system architecture, code standards, codebase summary
 
 ## Success Metrics
 
@@ -187,10 +187,12 @@ Auth (API Key/JWT) → Workspace Scoping →
 | **Latency (Cloud)** | P95 <10s | Pass |
 | **Latency (Local)** | P95 <3s | Pass |
 | **Test Coverage** | 100% services, 95%+ pipelines | Pass |
-| **API Endpoints** | 42+ documented routes | Complete |
-| **Database Tables** | 13 (ORM mapped, alembic managed) | Complete |
+| **API Endpoints** | 45+ documented routes | Complete |
+| **Database Tables** | 15 (ORM mapped, alembic managed) | Complete |
+| **Test Functions** | ~106 across 28 files (~5,100 LOC) | Complete |
 | **Test Execution** | <8s total | ~7.2s |
 | **Workspace Isolation** | All queries filtered by workspace_id | Enforced |
-| **Job Queue** | ARQ Redis backend with fallback | Complete |
-| **Real-time Events** | WebSocket pub/sub, 30s heartbeat | Complete |
-| **Template Marketplace** | 4 curated templates, import/suggest | Complete |
+| **Job Queue** | ARQ Redis backend with asyncio.Queue fallback | Complete |
+| **Real-time Events** | WebSocket pub/sub, 30s heartbeat, job/batch updates | Complete |
+| **Review System** | HITL review, corrections, accuracy tracking | Complete |
+| **Template Marketplace** | 4 curated templates, import, auto-suggest | Complete |

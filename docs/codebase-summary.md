@@ -229,7 +229,7 @@ amanuo/
 | `middleware/auth-middleware.py` | ~70 | API key (SHA256), JWT (HS256) validation, workspace scoping |
 | `services/auth-service.py` | ~120 | User registration/login, bcrypt (12 rounds), JWT generation |
 
-### API Layer (39 Endpoints)
+### API Layer (45+ Endpoints)
 
 | Router | Endpoints | Purpose |
 |---|---|---|
@@ -237,8 +237,8 @@ amanuo/
 | `routers/extract.py` | POST /extract | Single file extraction |
 | `routers/batch.py` | /extract/batch, /batches, /batches/{id}/cancel | Batch processing |
 | `routers/jobs.py` | GET /jobs, /jobs/{id}, /jobs/{id}/document | Job status, results, document serving |
-| `routers/reviews.py` | POST /reviews/{id}, GET /reviews | HITL review system |
-| `routers/accuracy.py` | GET /accuracy/{schema_id}, POST /accuracy/{schema_id}/compute | Accuracy metrics |
+| `routers/reviews.py` | POST /reviews/{job_id}, GET /reviews | HITL review submissions, corrections |
+| `routers/accuracy.py` | GET /accuracy/{schema_id}, POST /compute | Accuracy metrics + computation |
 | `routers/pipelines.py` | /pipelines (CRUD) | YAML config pipelines |
 | `routers/schemas.py` | /schemas, /schemas/{id}/versions | Schema CRUD, versioning |
 | `routers/templates.py` | /templates, /templates/{id}/import, /schemas/suggest | Template marketplace, suggest |
@@ -432,13 +432,13 @@ pending → processing → completed (if all succeeded)
 
 ## Testing Strategy
 
-### Test Coverage (204 tests, 6.5s execution)
+### Test Coverage (~106 test functions, 28 test files, ~7.2s execution)
 
 | Category | Count | Purpose |
 |---|---|---|
-| **Unit** | 148 | Validators, services, providers (no I/O, mocked) |
-| **Integration** | 0 | (Skipped in CI; require live services) |
-| **E2E** | 56 | Full workflows: auth, extraction, batch, pipeline, webhook, workspace |
+| **Unit** | 20 files | Validators, services, providers (no I/O, mocked) |
+| **Integration** | 1 file | Placeholder for external service tests (skipped in CI) |
+| **E2E** | 8 files | Full workflows: auth, extraction, batch, pipeline, webhook, workspace |
 
 ### Test Markers (pytest)
 ```python
@@ -449,31 +449,39 @@ pending → processing → completed (if all succeeded)
 
 ### Test Files Breakdown
 
-**Unit Tests (148):**
-- `test-auth-middleware.py` — API key, JWT validation
-- `test-auth-service.py` — Registration, login, password hashing
-- `test-batch-service.py` — Batch creation, status derivation
-- `test-confidence-scorer.py` — Field aggregation
-- `test-pipeline-config.py` — YAML parsing, validation
-- `test-pipeline-executor.py` — Step execution, error handling
-- `test-schema-converter.py` — CSV/JSON parsing
-- `test-schema-models.py` — Pydantic validation
+**Unit Tests (20 files):**
+- `test-auth-middleware.py` — API key (SHA256), JWT (HS256) validation
+- `test-auth-service.py` — Registration, login, password hashing (bcrypt)
+- `test-batch-service.py` — Batch creation, status derivation, atomic counters
+- `test-confidence-scorer.py` — Field-level aggregation logic
+- `test-pipeline-config.py` — YAML parsing, config validation
+- `test-pipeline-executor.py` — Sequential step execution, error handling
+- `test-schema-converter.py` — CSV/JSON parsing, normalization
+- `test-schema-models.py` — Pydantic validation schemas
 - `test-schema-validator.py` — Field type checking (15+ scenarios)
-- `test-schema-versioning.py` — Semver bump, compatibility
+- `test-schema-versioning.py` — Semver bump rules, compatibility checks
 - `test-schema-migration.py` — Version history, field diffs
-- `test-router-service.py` — Provider selection logic
-- `test-webhook-service.py` — Event registry, HMAC signing
-- `test-csv-prompt-builder.py` — CSV→prompt conversion
+- `test-router-service.py` — Provider selection logic (local vs cloud)
+- `test-webhook-service.py` — Event registry, HMAC-SHA256 signing
+- `test-csv-prompt-builder.py` — CSV→schema conversion
+- `test-review-service.py` — HITL review CRUD, corrections
+- `test-accuracy-service.py` — Metric computation, per-field breakdown
+- `test-template-service.py` — Template CRUD, seeding
+- `test-prompt-hint-builder.py` — Hint generation from corrections
+- 2 additional unit test files for edge cases/utilities
 
-**E2E Tests (56):**
-- `test-auth-flow.py` — Register, login, API key generation
-- `test-extract-flow.py` — Single extraction workflow
-- `test-batch-flow.py` — Multi-file batch processing
-- `test-pipeline-flow.py` — Pipeline creation, execution, steps
-- `test-webhook-flow.py` — Event registration, delivery, retry
-- `test-schema-crud.py` — Create, read, update, delete schemas
-- `test-schema-versioning-flow.py` — Version management, migration
-- `test-workspace-isolation.py` — Multi-tenant enforcement
+**Integration Tests (1 file):**
+- Placeholder for external service tests (skipped in CI; require live Ollama/Gemini)
+
+**E2E Tests (8 files):**
+- `test-auth-flow.py` — Register, login, API key generation, JWT refresh
+- `test-extract-flow.py` — Single extraction, status polling, result retrieval
+- `test-batch-flow.py` — Multi-file batch, status aggregation, cancellation
+- `test-pipeline-flow.py` — Pipeline YAML parsing, step execution, error handling
+- `test-webhook-flow.py` — Webhook registration, HMAC delivery, retry backoff
+- `test-schema-crud.py` — Schema create/read/update/delete, versioning
+- `test-workspace-isolation.py` — Multi-tenant enforcement, workspace scoping
+- `test-review-flow.py` — HITL review, corrections, accuracy metrics
 
 ## Data Flow Summary
 
@@ -630,16 +638,17 @@ EVENT_HEARTBEAT_INTERVAL=30
 
 | Metric | Value |
 |---|---|
-| **Backend Code** | ~3,500 LOC (src/) |
-| **Frontend Code** | ~2,800 LOC (frontend/) |
-| **Test Code** | ~2,400 LOC (tests/) |
-| **Total LOC** | ~8,700 |
-| **Database Tables** | 15 |
-| **API Endpoints** | 45 (added review + accuracy) |
-| **Test Files** | 25+ |
-| **Test Count** | 313 (148 unit + 56 E2E + 109 new) |
+| **Backend Code** | ~7,300 LOC across 84 modules (src/) |
+| **Frontend Code** | ~2,800 LOC across 25 files (frontend/) |
+| **Test Code** | ~5,100 LOC across 28 files (tests/) |
+| **Total LOC** | ~15,200 |
+| **Database Tables** | 15 (SQLAlchemy ORM + alembic) |
+| **API Endpoints** | 45+ (auth, extract, batch, reviews, accuracy, templates, webhooks, ws) |
+| **Services** | 22 modules (auth, workspace, job, batch, review, accuracy, template, etc.) |
+| **Routers** | 14 (auth, extract, batch, jobs, reviews, accuracy, pipelines, schemas, templates, webhooks, websocket-events, workspaces, health) |
+| **Test Files** | 28 (20 unit + 1 integration + 8 e2e) |
+| **Test Functions** | ~106 |
 | **Test Execution** | ~7.2 seconds |
-| **Modules** | ~55 |
-| **Classes** | ~80 |
-| **Async Functions** | ~95 |
+| **Classes** | ~80+ (ORM models, services, providers, pipeline steps) |
+| **Async Functions** | ~95+ |
 | **Test Coverage** | 100% (services), 95%+ (pipelines), 90%+ (review, accuracy) |

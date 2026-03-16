@@ -15,16 +15,16 @@
 │  └────────────────────────────────────────────────────────────────────────┘ │
 │                            ↓ HTTP/REST (port 3000→8000)                     │
 │                                                                              │
-│  API Layer (42+ Endpoints)                                                  │
+│  API Layer (45+ Endpoints)                                                  │
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
 │  │  Auth: /auth/register /auth/login /auth/logout                        │ │
 │  │  Keys: /api-keys (CRUD, SHA256 hash)                                  │ │
 │  │  Workspaces: /workspaces (CRUD, soft multi-tenancy)                  │ │
-│  │  Extraction: /extract /jobs /schemas /schemas/{id}/versions          │ │
+│  │  Extraction: /extract /jobs /jobs/{id}/document /schemas/*           │ │
 │  │  Batch: /extract/batch /batches /batches/{id}/cancel                 │ │
-│  │  Pipelines: /pipelines (YAML config CRUD)                            │ │
-│  │  Review: /reviews, /reviews/{id}, /jobs/{id}/document (serving)     │ │
-│  │  Accuracy: /accuracy/{schema_id} (metrics + compute)                │ │
+│  │  Pipelines: /pipelines (YAML CRUD)                                   │ │
+│  │  Reviews: /reviews/{job_id}, GET /reviews (HITL corrections)         │ │
+│  │  Accuracy: /accuracy/{schema_id} (metrics + compute)                 │ │
 │  │  Templates: /templates /templates/{id}/import /schemas/suggest       │ │
 │  │  WebSocket: /ws/events (Redis pub/sub, 30s heartbeat)                │ │
 │  │  Webhooks: /webhooks /webhooks/{id}/deliveries (retry backoff)       │ │
@@ -81,8 +81,9 @@
 │  Data Layer                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │  Database: SQLAlchemy ORM + SQLite/PostgreSQL (15 tables)           │   │
-│  │    Tables: users, workspaces, jobs, batches, pipelines, webhooks,  │   │
-│  │             deliveries, schemas, versions, api_keys, templates,     │   │
+│  │    Tables: users, workspaces, api_keys, jobs, schemas,              │   │
+│  │             schema_versions, pipelines, batches, batch_items,       │   │
+│  │             webhooks, webhook_deliveries, schema_templates,         │   │
 │  │             extraction_reviews, accuracy_metrics                    │   │
 │  │  Queue: ARQ (Redis-backed job queue, in-memory fallback)            │   │
 │  │  Pub/Sub: Redis for WebSocket event broadcast                       │   │
