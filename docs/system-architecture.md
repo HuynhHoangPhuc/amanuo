@@ -23,6 +23,8 @@
 │  │  Extraction: /extract /jobs /schemas /schemas/{id}/versions          │ │
 │  │  Batch: /extract/batch /batches /batches/{id}/cancel                 │ │
 │  │  Pipelines: /pipelines (YAML config CRUD)                            │ │
+│  │  Review: /reviews, /reviews/{id}, /jobs/{id}/document (serving)     │ │
+│  │  Accuracy: /accuracy/{schema_id} (metrics + compute)                │ │
 │  │  Templates: /templates /templates/{id}/import /schemas/suggest       │ │
 │  │  WebSocket: /ws/events (Redis pub/sub, 30s heartbeat)                │ │
 │  │  Webhooks: /webhooks /webhooks/{id}/deliveries (retry backoff)       │ │
@@ -46,6 +48,9 @@
 │  │  Webhook Service: Event registry, HMAC-SHA256 signing, delivery     │   │
 │  │  Webhook Delivery: Async queue, retry backoff [60s, 5m, 30m, 2h]   │   │
 │  │  Schema Service: Versioning, migration tracking, diff analysis      │   │
+│  │  Review Service: CRUD, correction diff, auto-review gating          │   │
+│  │  Accuracy Service: Compute metrics, cache, per-field breakdown      │   │
+│  │  Prompt Hint Builder: Aggregate corrections → hint generation       │   │
 │  │  Schema Suggest: VLM field suggestion, graceful degradation         │   │
 │  │  Template Service: Template CRUD, seeding, marketplace              │   │
 │  │  Redis Pool: ARQ connection pool singleton                          │   │
@@ -75,13 +80,14 @@
 │                                  ↓                                           │
 │  Data Layer                                                                  │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  Database: SQLAlchemy ORM + SQLite/PostgreSQL (13 tables)           │   │
+│  │  Database: SQLAlchemy ORM + SQLite/PostgreSQL (15 tables)           │   │
 │  │    Tables: users, workspaces, jobs, batches, pipelines, webhooks,  │   │
-│  │             deliveries, schemas, versions, api_keys, templates      │   │
+│  │             deliveries, schemas, versions, api_keys, templates,     │   │
+│  │             extraction_reviews, accuracy_metrics                    │   │
 │  │  Queue: ARQ (Redis-backed job queue, in-memory fallback)            │   │
 │  │  Pub/Sub: Redis for WebSocket event broadcast                       │   │
-│  │  File Storage: Uploaded documents, batch items                     │   │
-│  │  Cache: In-memory schema templates, provider availability          │   │
+│  │  File Storage: Uploaded documents, batch items, extracted docs     │   │
+│  │  Cache: In-memory schema templates, prompt hints, provider avail.  │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
@@ -342,7 +348,7 @@ Event format:
 - **Graceful Degradation**: Falls back to empty suggestion if VLM unavailable
 - **Frontend**: `schema-suggest-form.tsx`, `suggested-fields-editor.tsx`
 
-## Database Schema (13 Tables)
+## Database Schema (15 Tables)
 
 ### Authentication & Workspaces
 ```sql
@@ -383,7 +389,7 @@ CREATE TABLE api_keys (
 CREATE TABLE jobs (
   id TEXT PRIMARY KEY,
   workspace_id TEXT FOREIGN KEY,
-  status TEXT CHECK(status IN ('pending', 'processing', 'completed', 'failed')),
+  status TEXT CHECK(status IN ('pending', 'processing', 'completed', 'failed', 'pending_review', 'reviewed')),
   mode TEXT,
   pipeline_id TEXT,
   input_file TEXT,
@@ -510,6 +516,41 @@ CREATE TABLE schema_templates (
   created_at TEXT,
   INDEX(category),
   INDEX(curated)
+);
+
+-- Extraction Reviews (HITL Review System)
+CREATE TABLE extraction_reviews (
+  id TEXT PRIMARY KEY,
+  job_id TEXT FOREIGN KEY UNIQUE,
+  workspace_id TEXT FOREIGN KEY,
+  status TEXT CHECK(status IN ('approved', 'corrected')),
+  original_result TEXT,  -- JSON: original extraction
+  corrected_result TEXT,  -- JSON: corrected fields (nullable)
+  corrections TEXT,  -- JSON: [{field, original, corrected}]
+  reviewer_id TEXT FOREIGN KEY,  -- User who reviewed (nullable)
+  review_time_ms INTEGER,  -- Time spent reviewing
+  created_at TEXT,
+  INDEX(workspace_id),
+  INDEX(job_id),
+  INDEX(status)
+);
+
+-- Accuracy Metrics (Dashboard & Learning)
+CREATE TABLE accuracy_metrics (
+  id TEXT PRIMARY KEY,
+  schema_id TEXT FOREIGN KEY,
+  workspace_id TEXT FOREIGN KEY,
+  period_start TEXT,  -- ISO date
+  period_end TEXT,  -- ISO date
+  total_reviews INTEGER,
+  approved_count INTEGER,  -- No corrections needed
+  corrected_count INTEGER,  -- Corrections submitted
+  accuracy_pct REAL,  -- approved / total * 100
+  field_accuracy TEXT,  -- JSON: {field: {correct, total, pct}}
+  created_at TEXT,
+  INDEX(workspace_id),
+  INDEX(schema_id),
+  INDEX(period_start)
 );
 ```
 

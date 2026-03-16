@@ -16,21 +16,27 @@ amanuo/
 │   ├── models/
 │   │   ├── __init__.py
 │   │   ├── api-models.py            # Pydantic request/response schemas
+│   │   ├── base.py                  # Base, TimestampMixin (ORM)
 │   │   ├── job.py                   # Job ORM model
 │   │   ├── batch.py                 # Batch ORM model, atomic counters
 │   │   ├── pipeline.py              # Pipeline ORM model (YAML config storage)
 │   │   ├── webhook.py               # Webhook ORM model (event types, secret)
-│   │   └── workspace.py             # Workspace ORM model, user isolation
+│   │   ├── workspace.py             # Workspace ORM model, user isolation
+│   │   ├── extraction-review.py     # ExtractionReview ORM model (HITL reviews)
+│   │   ├── accuracy-metric.py       # AccuracyMetric ORM model (dashboard)
+│   │   └── schema-template.py       # SchemaTemplate ORM model (marketplace)
 │   │
 │   ├── routers/
 │   │   ├── __init__.py
 │   │   ├── auth.py                  # POST /auth/register, /login, /logout
 │   │   ├── extract.py               # POST /extract (single file)
-│   │   ├── jobs.py                  # GET /jobs, /jobs/{id}
+│   │   ├── jobs.py                  # GET /jobs, /jobs/{id}, /jobs/{id}/document (serving)
 │   │   ├── batch.py                 # POST /extract/batch, GET /batches, cancel
 │   │   ├── pipelines.py             # CRUD /pipelines (YAML config)
+│   │   ├── reviews.py               # POST /reviews/{id}, GET /reviews (HITL review system)
+│   │   ├── accuracy.py              # GET /accuracy (metrics + computation)
 │   │   ├── schemas.py               # CRUD /schemas, version history
-│   │   ├── templates.py             # GET /templates, POST /import, schema suggest
+│   │   ├── templates.py             # GET /templates, POST /import, POST /schemas/suggest
 │   │   ├── webhooks.py              # Register, test, delivery logs
 │   │   ├── websocket-events.py      # GET /ws/events (real-time event stream)
 │   │   ├── workspaces.py            # CRUD /workspaces
@@ -45,12 +51,15 @@ amanuo/
 │   │   ├── pipeline-service.py      # Pipeline CRUD, executor delegation
 │   │   ├── webhook-service.py       # Event registration, HMAC-SHA256 signing
 │   │   ├── webhook-delivery.py      # Async delivery queue, retry backoff
-│   │   ├── extraction-worker.py     # ARQ job enqueue, provider selection, scoring
+│   │   ├── extraction-worker.py     # ARQ job enqueue, provider selection, scoring, review gating
 │   │   ├── redis-pool.py            # ARQ Redis connection pool singleton
 │   │   ├── arq-worker-settings.py   # ARQ worker config, job handlers
 │   │   ├── event-broadcaster.py     # Redis pub/sub for WebSocket events
 │   │   ├── router-service.py        # Provider selection (local→cloud fallback)
 │   │   ├── confidence-scorer.py     # Field-level aggregation
+│   │   ├── review-service.py        # Review CRUD, correction diff, auto-review logic
+│   │   ├── prompt-hint-builder.py   # Aggregate corrections → hint generation
+│   │   ├── accuracy-service.py      # Compute + store accuracy metrics
 │   │   ├── schema-suggest-service.py # VLM field suggestion for schema design
 │   │   ├── template-service.py      # Schema template CRUD + seeding
 │   │   ├── folder-watcher.py        # watchfiles batch aggregation (60s window)
@@ -111,8 +120,13 @@ amanuo/
 │   │   │   ├── index.tsx            # Dashboard
 │   │   │   ├── jobs.tsx             # Job list
 │   │   │   ├── jobs_.$jobId.tsx     # Job detail
+│   │   │   ├── reviews.tsx          # Review queue list
+│   │   │   ├── reviews_.$jobId.tsx  # Side-by-side review page
+│   │   │   ├── accuracy.tsx         # Accuracy dashboard
 │   │   │   ├── schemas.tsx          # Schema management
+│   │   │   ├── templates.tsx        # Template marketplace
 │   │   │   ├── batches.tsx          # Batch tracking
+│   │   │   ├── batches_.$batchId.review.tsx # Batch review table
 │   │   │   ├── pipelines.tsx        # Pipeline editor
 │   │   │   ├── webhooks.tsx         # Webhook config
 │   │   │   └── settings.tsx         # User settings
@@ -121,6 +135,14 @@ amanuo/
 │   │   │   ├── SidebarNav.tsx       # Left sidebar
 │   │   │   ├── PageLayout.tsx       # Common layout wrapper
 │   │   │   ├── json-result-viewer.tsx # JSON display component
+│   │   │   ├── document-viewer.tsx  # PDF/image viewer for reviews
+│   │   │   ├── field-editor.tsx     # Inline editable field
+│   │   │   ├── review-toolbar.tsx   # Approve/correct/skip buttons
+│   │   │   ├── accuracy-chart.tsx   # SVG line chart for dashboard
+│   │   │   ├── field-accuracy-table.tsx # Per-field breakdown table
+│   │   │   ├── schema-suggest-form.tsx # Upload + suggest UI
+│   │   │   ├── template-card.tsx    # Template marketplace card
+│   │   │   ├── suggested-fields-editor.tsx # Edit suggested fields
 │   │   │   ├── loading-skeleton.tsx # Loading state
 │   │   │   ├── status-badge.tsx     # Status indicator
 │   │   │   ├── toast-provider.tsx   # Toast notifications
@@ -128,6 +150,7 @@ amanuo/
 │   │   │   └── Footer.tsx           # Footer
 │   │   ├── lib/
 │   │   │   ├── api-client.ts        # HTTP client (X-API-Key auth)
+│   │   │   ├── websocket-client.ts  # WebSocket manager with auto-reconnect
 │   │   │   ├── query-keys.ts        # TanStack Query key factories
 │   │   │   └── types.ts             # TypeScript type definitions
 │   │   ├── main.tsx                 # React entry point
@@ -197,7 +220,7 @@ amanuo/
 |---|---|---|
 | `main.py` | ~120 | FastAPI app, lifespan setup, router mounting |
 | `config.py` | ~80 | Settings (auth tokens, webhooks, VLM, processing) |
-| `database.py` | ~280 | SQLite schema (11 tables), initialization, indexes |
+| `database.py` | ~280 | SQLite schema (15 tables), initialization, indexes |
 
 ### Authentication & Middleware
 
@@ -213,9 +236,12 @@ amanuo/
 | `routers/auth.py` | /auth/register, /login, /logout | User authentication |
 | `routers/extract.py` | POST /extract | Single file extraction |
 | `routers/batch.py` | /extract/batch, /batches, /batches/{id}/cancel | Batch processing |
-| `routers/jobs.py` | GET /jobs, /jobs/{id} | Job status, results |
+| `routers/jobs.py` | GET /jobs, /jobs/{id}, /jobs/{id}/document | Job status, results, document serving |
+| `routers/reviews.py` | POST /reviews/{id}, GET /reviews | HITL review system |
+| `routers/accuracy.py` | GET /accuracy/{schema_id}, POST /accuracy/{schema_id}/compute | Accuracy metrics |
 | `routers/pipelines.py` | /pipelines (CRUD) | YAML config pipelines |
 | `routers/schemas.py` | /schemas, /schemas/{id}/versions | Schema CRUD, versioning |
+| `routers/templates.py` | /templates, /templates/{id}/import, /schemas/suggest | Template marketplace, suggest |
 | `routers/webhooks.py` | /webhooks, /deliveries, /test | Event registration, delivery |
 | `routers/workspaces.py` | /workspaces (CRUD) | Multi-tenancy |
 | `routers/health.py` | GET /health | Liveness check |
@@ -231,9 +257,12 @@ amanuo/
 | `pipeline-service.py` | ~85 | Pipeline CRUD, executor delegation |
 | `webhook-service.py` | ~90 | Event registry, HMAC-SHA256 signing |
 | `webhook-delivery.py` | ~110 | Async queue, retry backoff [60s, 5m, 30m, 2h] |
-| `extraction-worker.py` | ~90 | Job dequeue, provider selection, scoring |
+| `extraction-worker.py` | ~120 | Job dequeue, provider selection, scoring, review gating |
 | `router-service.py` | ~65 | Provider selection (local→cloud fallback) |
 | `confidence-scorer.py` | ~60 | Field-level confidence aggregation |
+| `review-service.py` | ~150 | Review CRUD, correction diff, auto-review logic |
+| `prompt-hint-builder.py` | ~120 | Aggregate corrections → hint generation (cached) |
+| `accuracy-service.py` | ~180 | Compute + store accuracy metrics per schema |
 | `folder-watcher.py` | ~80 | watchfiles batch aggregation (60s window) |
 
 ### Pipeline Engine (Step-Based Execution)
@@ -256,7 +285,7 @@ amanuo/
 | `schema-models.py` | ~70 | Pydantic models (SchemaField, ExtractionSchema, ExtractionResult) |
 | `schema-validator.py` | ~90 | Field validation, type checking, occurrence rules |
 | `schema-converter.py` | ~70 | CSV/JSON parsing, normalization |
-| `schema-store.py` | ~80 | Template persistence, in-memory caching |
+| `schema-store.py` | ~90 | Template persistence, in-memory caching, require_review field |
 | `schema-versioning.py` | ~110 | Semver auto-bump, backward compatibility checks |
 | `schema-migration.py` | ~100 | Migration tracking, field diff analysis |
 | `csv-prompt-builder.py` | ~60 | CSV→schema conversion for imports |
@@ -275,7 +304,7 @@ amanuo/
 | `ollama-backend.py` | ~70 | Ollama HTTP calls, model management |
 | `vllm-backend.py` | ~70 | vLLM HTTP calls, model management |
 | `llamacpp-backend.py` | ~70 | llama.cpp HTTP calls |
-| `vlm-prompt-builder.py` | ~80 | Schema→VLM prompt conversion, formatting |
+| `vlm-prompt-builder.py` | ~100 | Schema→VLM prompt conversion, hint injection |
 | `paddleocr-fallback.py` | ~60 | Text-only extraction fallback |
 
 ### Models (Data Layer)
@@ -283,13 +312,15 @@ amanuo/
 | Module | Purpose |
 |---|---|
 | `models/base.py` | `Base` ORM declarative, `TimestampMixin` (created_at, updated_at) |
-| `models/api-models.py` | Pydantic request/response schemas (ExtractionRequest, JobResponse, etc.) |
-| `models/job.py` | Job ORM model, SQLAlchemy mapping |
+| `models/api-models.py` | Pydantic request/response schemas (ExtractionRequest, JobResponse, ReviewRequest, etc.) |
+| `models/job.py` | Job ORM model, status including pending_review/reviewed |
 | `models/batch.py` | Batch ORM model, item tracking |
 | `models/pipeline.py` | Pipeline ORM model, YAML config storage |
 | `models/webhook.py` | Webhook ORM model, event types, secret |
 | `models/workspace.py` | Workspace ORM model, user isolation |
 | `models/schema-orm.py` | SchemaORM, SchemaVersionORM models |
+| `models/extraction-review.py` | ExtractionReview ORM for HITL review system |
+| `models/accuracy-metric.py` | AccuracyMetric ORM for tracking accuracy |
 | `models/schema-template.py` | SchemaTemplate ORM for template marketplace |
 
 ### Frontend (React 19 + TanStack)
@@ -599,16 +630,16 @@ EVENT_HEARTBEAT_INTERVAL=30
 
 | Metric | Value |
 |---|---|
-| **Backend Code** | ~3,200 LOC (src/) |
-| **Frontend Code** | ~2,300 LOC (frontend/) |
-| **Test Code** | ~2,000 LOC (tests/) |
-| **Total LOC** | ~7,500 |
-| **Database Tables** | 11 |
-| **API Endpoints** | 39 |
-| **Test Files** | 20+ |
-| **Test Count** | 204 (148 unit + 56 E2E) |
-| **Test Execution** | 6.5 seconds |
-| **Modules** | ~50 |
-| **Classes** | ~70 |
-| **Async Functions** | ~80 |
-| **Test Coverage** | 100% (services), 95%+ (pipelines) |
+| **Backend Code** | ~3,500 LOC (src/) |
+| **Frontend Code** | ~2,800 LOC (frontend/) |
+| **Test Code** | ~2,400 LOC (tests/) |
+| **Total LOC** | ~8,700 |
+| **Database Tables** | 15 |
+| **API Endpoints** | 45 (added review + accuracy) |
+| **Test Files** | 25+ |
+| **Test Count** | 313 (148 unit + 56 E2E + 109 new) |
+| **Test Execution** | ~7.2 seconds |
+| **Modules** | ~55 |
+| **Classes** | ~80 |
+| **Async Functions** | ~95 |
+| **Test Coverage** | 100% (services), 95%+ (pipelines), 90%+ (review, accuracy) |

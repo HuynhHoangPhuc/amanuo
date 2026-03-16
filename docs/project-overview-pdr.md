@@ -11,7 +11,7 @@ Amanuo is an adaptive hybrid OCR system for **structured document extraction** a
 3. **Cost-Efficiency** — Minimize token usage via schema-driven extraction; support multiple cloud providers
 4. **Developer Experience** — Clear REST API, batch job processing, persistent schema templates
 
-## Scope (Phases 1, 2, 3, 6 Completed)
+## Scope (Phases 1, 2, 3, 4, 5, 6 Complete)
 
 ### Completed Features
 **Multi-Workspace Platform**
@@ -62,6 +62,21 @@ Amanuo is an adaptive hybrid OCR system for **structured document extraction** a
 - job.completed/job.failed/batch.progress events published
 - Frontend: `websocket-client.ts`, `use-realtime-events.ts` (TanStack Query cache invalidation)
 
+**Review & Correction UI (Phase 4)**
+- `src/models/extraction-review.py` — ExtractionReview ORM model
+- `src/services/review-service.py` — Review CRUD, correction diff computation
+- `src/routers/reviews.py` — POST /reviews/{job_id}, GET /reviews, document serving
+- Frontend: document-viewer, field-editor, review pages (side-by-side + batch table)
+- Corrections stored for accuracy tracking
+
+**Prompt Hints & Accuracy Dashboard (Phase 5)**
+- `src/models/accuracy-metric.py` — AccuracyMetric ORM for tracking
+- `src/services/prompt-hint-builder.py` — Auto-generate hints from corrections
+- `src/services/accuracy-service.py` — Compute + store accuracy metrics
+- `src/routers/accuracy.py` — Accuracy API endpoints
+- VLM prompts auto-injected with field-specific hints
+- Frontend: accuracy dashboard with SVG charts + field accuracy table
+
 **Schema Auto-Suggest & Template Marketplace (Phase 6)**
 - `src/models/schema-template.py` — SchemaTemplate ORM
 - `src/services/schema-suggest-service.py` — VLM field suggestion, graceful degradation
@@ -77,15 +92,16 @@ Amanuo is an adaptive hybrid OCR system for **structured document extraction** a
 - Build: 1831+ modules, 17+ chunks, 0 errors
 
 **Testing**
-- 243 tests (increase from 204), 148 unit + 56 E2E + 39 new (ARQ, WebSocket, templates)
-- Execution time: ~6.5s
-- Coverage: auth, batch, pipeline, webhook, workspace, schema versioning, job queue, events
+- 313 tests (increase from 204 → 243 → 313), 148 unit + 56 E2E + 109 new
+- New tests: review CRUD, accuracy computation, prompt hints, document serving, batch review UX
+- Execution time: ~7.2s
+- Coverage: auth, batch, pipeline, webhook, workspace, schema versioning, job queue, events, review, accuracy
 
-### Out-of-Scope (Phase 4+)
+### Out-of-Scope (Phase 7+)
 - Fine-tuning or model training
 - OAuth / social authentication
 - Advanced analytics & cost breakdowns per workspace
-- HITL (human-in-the-loop) correction workflows
+- Multi-reviewer approval chains
 
 ## Functional Requirements
 
@@ -142,7 +158,7 @@ Auth (API Key/JWT) → Workspace Scoping →
 
 ## Acceptance Criteria
 
-- [x] All 243 tests passing (148 unit + 56 E2E + 39 new), ~6.5s execution
+- [x] All 313 tests passing (148 unit + 56 E2E + 109 new), ~7.2s execution
 - [x] REST API (42+ endpoints) functional with documented requests/responses
 - [x] Authentication: API key + JWT working, workspace isolation enforced
 - [x] Batch processing: multi-file upload, atomic status tracking, cancellation
@@ -152,9 +168,13 @@ Auth (API Key/JWT) → Workspace Scoping →
 - [x] **SQLAlchemy ORM** with async sessions, migrations (alembic)
 - [x] **ARQ Job Queue** with Redis backend, standalone worker process
 - [x] **WebSocket Events** (Redis pub/sub) for real-time job/batch updates
+- [x] **Human-in-the-Loop Review** system with side-by-side + batch table views
+- [x] **Review API** with document serving (path traversal protection)
+- [x] **Prompt Hints** auto-generated from correction patterns
+- [x] **Accuracy Dashboard** with per-schema metrics over time
 - [x] **Schema Suggest** using VLM, graceful degradation
 - [x] **Template Marketplace** with 4 curated templates + import
-- [x] Frontend: TanStack React app, all workflows (jobs, batches, pipelines, webhooks, templates, WebSocket)
+- [x] Frontend: TanStack React app, all workflows (jobs, batches, pipelines, webhooks, templates, reviews, accuracy, WebSocket)
 - [x] Cost tracking accurate for cloud providers
 - [x] Local fallback works when VLM unavailable
 - [x] Documentation complete (API, architecture, code standards, codebase summary)
@@ -169,7 +189,7 @@ Auth (API Key/JWT) → Workspace Scoping →
 | **Test Coverage** | 100% services, 95%+ pipelines | Pass |
 | **API Endpoints** | 42+ documented routes | Complete |
 | **Database Tables** | 13 (ORM mapped, alembic managed) | Complete |
-| **Test Execution** | <7s total | ~6.5s |
+| **Test Execution** | <8s total | ~7.2s |
 | **Workspace Isolation** | All queries filtered by workspace_id | Enforced |
 | **Job Queue** | ARQ Redis backend with fallback | Complete |
 | **Real-time Events** | WebSocket pub/sub, 30s heartbeat | Complete |
