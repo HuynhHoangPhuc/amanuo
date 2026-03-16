@@ -24,11 +24,20 @@ class Settings(BaseSettings):
     max_file_size_mb: int = 20
     max_workers: int = 3
 
+    # Auth
+    jwt_secret: str = ""  # Set in .env for production; auto-generated if empty
+
     # Redis (optional, for future Celery queue)
     redis_url: str = "redis://localhost:6379/0"
 
     # Upload storage
     upload_dir: str = "data/uploads"
+
+    # Folder watcher (batch processing)
+    watch_dir: str = ""  # empty = disabled
+    watch_schema_id: str = ""
+    watch_pipeline_id: str = ""
+    watch_batch_window_seconds: int = 5
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
