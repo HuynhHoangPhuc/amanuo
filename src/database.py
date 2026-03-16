@@ -76,7 +76,7 @@ def get_session_factory() -> async_sessionmaker:
 
 # --- Schema migrations (raw SQL, kept for init_db compatibility) ---
 
-_SCHEMA_VERSION = 2
+_SCHEMA_VERSION = 3
 
 _MIGRATIONS = {
     1: [
@@ -226,6 +226,38 @@ _MIGRATIONS = {
         "ALTER TABLE schemas ADD COLUMN workspace_id TEXT REFERENCES workspaces(id)",
         "ALTER TABLE schemas ADD COLUMN current_version TEXT DEFAULT '1.0.0'",
     ],
+    3: [
+        """
+        CREATE TABLE IF NOT EXISTS extraction_reviews (
+            id TEXT PRIMARY KEY,
+            job_id TEXT NOT NULL UNIQUE REFERENCES jobs(id),
+            workspace_id TEXT NOT NULL REFERENCES workspaces(id),
+            status TEXT NOT NULL,
+            original_result TEXT NOT NULL,
+            corrected_result TEXT,
+            corrections TEXT,
+            reviewer_id TEXT,
+            review_time_ms INTEGER,
+            created_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS accuracy_metrics (
+            id TEXT PRIMARY KEY,
+            schema_id TEXT NOT NULL REFERENCES schemas(id),
+            workspace_id TEXT NOT NULL REFERENCES workspaces(id),
+            period_start TEXT NOT NULL,
+            period_end TEXT NOT NULL,
+            total_reviews INTEGER NOT NULL DEFAULT 0,
+            approved_count INTEGER NOT NULL DEFAULT 0,
+            corrected_count INTEGER NOT NULL DEFAULT 0,
+            accuracy_pct REAL NOT NULL DEFAULT 0.0,
+            field_accuracy TEXT NOT NULL DEFAULT '{}',
+            created_at TEXT NOT NULL
+        )
+        """,
+        "ALTER TABLE schemas ADD COLUMN require_review INTEGER NOT NULL DEFAULT 0",
+    ],
 }
 
 _SEED_DEFAULT_WORKSPACE = """
@@ -248,6 +280,11 @@ _INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_schema_versions_schema ON schema_versions(schema_id)",
     "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)",
     "CREATE INDEX IF NOT EXISTS idx_users_workspace ON users(workspace_id)",
+    "CREATE INDEX IF NOT EXISTS idx_reviews_job ON extraction_reviews(job_id)",
+    "CREATE INDEX IF NOT EXISTS idx_reviews_workspace ON extraction_reviews(workspace_id)",
+    "CREATE INDEX IF NOT EXISTS idx_reviews_status ON extraction_reviews(status)",
+    "CREATE INDEX IF NOT EXISTS idx_accuracy_schema ON accuracy_metrics(schema_id)",
+    "CREATE INDEX IF NOT EXISTS idx_accuracy_workspace ON accuracy_metrics(workspace_id)",
 ]
 
 
@@ -299,9 +336,14 @@ async def init_db(db_path: str = _DB_PATH) -> None:
             await db.execute(_SEED_DEFAULT_WORKSPACE)
             await db.execute(_BACKFILL_JOBS)
             await db.execute(_BACKFILL_SCHEMAS)
-            for idx_sql in _INDEXES:
-                await db.execute(idx_sql)
             await _seed_default_api_key(db)
+
+        # Always ensure indexes exist (idempotent CREATE IF NOT EXISTS)
+        for idx_sql in _INDEXES:
+            try:
+                await db.execute(idx_sql)
+            except aiosqlite.OperationalError:
+                pass  # Table may not exist yet in edge cases
 
         await db.commit()
     finally:

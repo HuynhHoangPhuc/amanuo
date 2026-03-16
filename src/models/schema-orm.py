@@ -1,6 +1,6 @@
 """SQLAlchemy ORM models for schema templates and version history."""
 
-from sqlalchemy import String, UniqueConstraint
+from sqlalchemy import String, Integer, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.models.base import Base, TimestampMixin
@@ -14,6 +14,7 @@ class SchemaORM(Base, TimestampMixin):
     fields: Mapped[str] = mapped_column(String, nullable=False)  # JSON array
     workspace_id: Mapped[str | None] = mapped_column(String, nullable=True)
     current_version: Mapped[str] = mapped_column(String, nullable=False, default="1.0.0")
+    require_review: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # boolean flag
 
 
 class SchemaVersionORM(Base):

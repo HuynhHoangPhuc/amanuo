@@ -46,6 +46,8 @@ _retry_checker_task = None
 _redis_pool = importlib.import_module("src.services.redis-pool")
 _event_broadcaster = importlib.import_module("src.services.event-broadcaster")
 _ws_events_router = importlib.import_module("src.routers.websocket-events")
+_reviews_router = importlib.import_module("src.routers.reviews")
+_accuracy_router = importlib.import_module("src.routers.accuracy")
 
 
 @asynccontextmanager
@@ -169,6 +171,8 @@ if _batch_router:
     app.include_router(_batch_router.router)
 app.include_router(_templates_router.router)
 app.include_router(_ws_events_router.router)
+app.include_router(_reviews_router.router)
+app.include_router(_accuracy_router.router)
 
 try:
     import gradio as gr

@@ -39,7 +39,7 @@ class JobORM(Base):
 
 class Job(BaseModel):
     id: str
-    status: Literal["pending", "processing", "completed", "failed"] = "pending"
+    status: Literal["pending", "processing", "completed", "failed", "pending_review", "reviewed"] = "pending"
     mode: Literal["local_only", "cloud", "auto"]
     cloud_provider: str | None = None
     schema_fields: str | None = None  # JSON-serialized schema

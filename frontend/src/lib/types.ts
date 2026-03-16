@@ -1,6 +1,6 @@
 /** TypeScript types mirroring FastAPI Pydantic models. */
 
-export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed'
+export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'pending_review' | 'reviewed'
 export type ExtractionMode = 'local_only' | 'cloud' | 'auto'
 
 export interface SchemaField {
@@ -172,6 +172,58 @@ export interface SchemaTemplate {
 export interface TemplateListResponse {
   templates: SchemaTemplate[]
   total: number
+}
+
+// Review types
+export type ReviewStatus = 'approved' | 'corrected'
+
+export interface ReviewCorrection {
+  field: string
+  original: string | number | boolean | null
+  corrected: string | number | boolean | null
+}
+
+export interface ReviewResponse {
+  id: string
+  job_id: string
+  workspace_id: string
+  status: ReviewStatus
+  original_result: ExtractionResult[]
+  corrected_result?: ExtractionResult[] | null
+  corrections?: ReviewCorrection[] | null
+  reviewer_id?: string | null
+  review_time_ms?: number | null
+  created_at: string
+}
+
+export interface ReviewListResponse {
+  reviews: ReviewResponse[]
+  total: number
+}
+
+export interface ReviewRequest {
+  status: ReviewStatus
+  corrected_result?: Record<string, unknown>[] | null
+  reviewer_id?: string | null
+  review_time_ms?: number | null
+}
+
+// Accuracy types
+export interface FieldAccuracyDetail {
+  correct: number
+  total: number
+  accuracy_pct: number
+}
+
+export interface AccuracyMetric {
+  id?: string
+  period_start: string
+  period_end: string
+  total_reviews: number
+  approved_count: number
+  corrected_count: number
+  accuracy_pct: number
+  field_accuracy: Record<string, FieldAccuracyDetail>
 }
 
 // Auth types

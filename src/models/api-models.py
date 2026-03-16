@@ -25,7 +25,7 @@ class CostResponse(BaseModel):
 
 class JobResponse(BaseModel):
     id: str
-    status: Literal["pending", "processing", "completed", "failed"]
+    status: Literal["pending", "processing", "completed", "failed", "pending_review", "reviewed"]
     mode: str
     cloud_provider: str | None = None
     created_at: str

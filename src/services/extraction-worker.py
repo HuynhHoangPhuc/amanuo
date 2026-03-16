@@ -85,16 +85,17 @@ async def process_job(job_id: str) -> None:
         result = await provider.extract(image, schema)
         conf = _confidence.score(result, schema)
 
+        final_status = await _determine_final_status(row, conf)
         await _job_service.update_job(
             job_id,
-            status="completed",
+            status=final_status,
             result=result.normalized,
             confidence=conf,
             cost_input_tokens=result.cost.input_tokens,
             cost_output_tokens=result.cost.output_tokens,
             cost_estimated_usd=result.cost.estimated_cost_usd,
         )
-        await _publish_job_event(workspace_id, job_id, "completed", conf)
+        await _publish_job_event(workspace_id, job_id, final_status, conf)
 
     except Exception as e:
         logger.exception("Job %s failed: %s", job_id, e)
@@ -153,16 +154,18 @@ async def _save_pipeline_result(job_id, context, schema, workspace_id):
                 else 0.0
             )
 
+    row_data = {"schema_id": context.schema_id if hasattr(context, "schema_id") else None}
+    final_status = await _determine_final_status(row_data, confidence or 0.0)
     await _job_service.update_job(
         job_id,
-        status="completed",
+        status=final_status,
         result=result_list,
         confidence=confidence,
         cost_input_tokens=context.cost_input_tokens,
         cost_output_tokens=context.cost_output_tokens,
         cost_estimated_usd=context.cost_estimated_usd,
     )
-    await _publish_job_event(workspace_id, job_id, "completed", confidence)
+    await _publish_job_event(workspace_id, job_id, final_status, confidence)
 
 
 async def _publish_job_event(workspace_id, job_id, status, confidence=None, error=None):
@@ -195,6 +198,27 @@ async def _update_batch(batch_id, job_status):
             await _batch_service.update_batch_counters(batch_id, failed_delta=1)
     except Exception:
         pass
+
+
+async def _determine_final_status(row: dict, confidence: float) -> str:
+    """Decide if job needs human review based on schema setting or confidence."""
+    from src.config import settings
+    schema_id = row.get("schema_id")
+    if schema_id:
+        try:
+            _schema_orm = importlib.import_module("src.models.schema-orm")
+            async with _get_session() as session:
+                result = await session.execute(
+                    select(_schema_orm.SchemaORM).where(_schema_orm.SchemaORM.id == schema_id)
+                )
+                schema_row = result.scalar_one_or_none()
+                if schema_row and getattr(schema_row, "require_review", False):
+                    return "pending_review"
+        except Exception:
+            pass
+    if confidence is not None and confidence < settings.review_confidence_threshold:
+        return "pending_review"
+    return "completed"
 
 
 def _load_schema(row) -> ExtractionSchema:

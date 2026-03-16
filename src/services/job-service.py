@@ -92,17 +92,26 @@ async def get_job_raw(job_id: str) -> dict | None:
         }
 
 
-async def list_jobs(workspace_id: str = "default", limit: int = 20, offset: int = 0) -> JobListResponse:
-    """List jobs with pagination, scoped to workspace."""
+async def list_jobs(
+    workspace_id: str = "default",
+    limit: int = 20,
+    offset: int = 0,
+    status_filter: str | None = None,
+) -> JobListResponse:
+    """List jobs with pagination, scoped to workspace, optionally filtered by status."""
     async with _get_session() as session:
+        base_filter = [JobORM.workspace_id == workspace_id]
+        if status_filter:
+            base_filter.append(JobORM.status == status_filter)
+
         total_result = await session.execute(
-            select(func.count()).select_from(JobORM).where(JobORM.workspace_id == workspace_id)
+            select(func.count()).select_from(JobORM).where(*base_filter)
         )
         total = total_result.scalar_one()
 
         rows_result = await session.execute(
             select(JobORM)
-            .where(JobORM.workspace_id == workspace_id)
+            .where(*base_filter)
             .order_by(JobORM.created_at.desc())
             .limit(limit)
             .offset(offset)

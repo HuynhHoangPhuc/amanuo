@@ -13,11 +13,15 @@ import { Route as WebhooksRouteImport } from './routes/webhooks'
 import { Route as TemplatesRouteImport } from './routes/templates'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SchemasRouteImport } from './routes/schemas'
+import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as PipelinesRouteImport } from './routes/pipelines'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as BatchesRouteImport } from './routes/batches'
+import { Route as AccuracyRouteImport } from './routes/accuracy'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ReviewsJobIdRouteImport } from './routes/reviews_.$jobId'
 import { Route as JobsJobIdRouteImport } from './routes/jobs_.$jobId'
+import { Route as BatchesBatchIdReviewRouteImport } from './routes/batches_.$batchId.review'
 
 const WebhooksRoute = WebhooksRouteImport.update({
   id: '/webhooks',
@@ -39,6 +43,11 @@ const SchemasRoute = SchemasRouteImport.update({
   path: '/schemas',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReviewsRoute = ReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PipelinesRoute = PipelinesRouteImport.update({
   id: '/pipelines',
   path: '/pipelines',
@@ -54,9 +63,19 @@ const BatchesRoute = BatchesRouteImport.update({
   path: '/batches',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccuracyRoute = AccuracyRouteImport.update({
+  id: '/accuracy',
+  path: '/accuracy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewsJobIdRoute = ReviewsJobIdRouteImport.update({
+  id: '/reviews_/$jobId',
+  path: '/reviews/$jobId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JobsJobIdRoute = JobsJobIdRouteImport.update({
@@ -64,103 +83,136 @@ const JobsJobIdRoute = JobsJobIdRouteImport.update({
   path: '/jobs/$jobId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BatchesBatchIdReviewRoute = BatchesBatchIdReviewRouteImport.update({
+  id: '/batches_/$batchId/review',
+  path: '/batches/$batchId/review',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/accuracy': typeof AccuracyRoute
   '/batches': typeof BatchesRoute
   '/jobs': typeof JobsRoute
   '/pipelines': typeof PipelinesRoute
+  '/reviews': typeof ReviewsRoute
   '/schemas': typeof SchemasRoute
   '/settings': typeof SettingsRoute
   '/templates': typeof TemplatesRoute
   '/webhooks': typeof WebhooksRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
+  '/reviews/$jobId': typeof ReviewsJobIdRoute
+  '/batches/$batchId/review': typeof BatchesBatchIdReviewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/accuracy': typeof AccuracyRoute
   '/batches': typeof BatchesRoute
   '/jobs': typeof JobsRoute
   '/pipelines': typeof PipelinesRoute
+  '/reviews': typeof ReviewsRoute
   '/schemas': typeof SchemasRoute
   '/settings': typeof SettingsRoute
   '/templates': typeof TemplatesRoute
   '/webhooks': typeof WebhooksRoute
   '/jobs/$jobId': typeof JobsJobIdRoute
+  '/reviews/$jobId': typeof ReviewsJobIdRoute
+  '/batches/$batchId/review': typeof BatchesBatchIdReviewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/accuracy': typeof AccuracyRoute
   '/batches': typeof BatchesRoute
   '/jobs': typeof JobsRoute
   '/pipelines': typeof PipelinesRoute
+  '/reviews': typeof ReviewsRoute
   '/schemas': typeof SchemasRoute
   '/settings': typeof SettingsRoute
   '/templates': typeof TemplatesRoute
   '/webhooks': typeof WebhooksRoute
   '/jobs_/$jobId': typeof JobsJobIdRoute
+  '/reviews_/$jobId': typeof ReviewsJobIdRoute
+  '/batches_/$batchId/review': typeof BatchesBatchIdReviewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/accuracy'
     | '/batches'
     | '/jobs'
     | '/pipelines'
+    | '/reviews'
     | '/schemas'
     | '/settings'
     | '/templates'
     | '/webhooks'
     | '/jobs/$jobId'
+    | '/reviews/$jobId'
+    | '/batches/$batchId/review'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/accuracy'
     | '/batches'
     | '/jobs'
     | '/pipelines'
+    | '/reviews'
     | '/schemas'
     | '/settings'
     | '/templates'
     | '/webhooks'
     | '/jobs/$jobId'
+    | '/reviews/$jobId'
+    | '/batches/$batchId/review'
   id:
     | '__root__'
     | '/'
+    | '/accuracy'
     | '/batches'
     | '/jobs'
     | '/pipelines'
+    | '/reviews'
     | '/schemas'
     | '/settings'
     | '/templates'
     | '/webhooks'
     | '/jobs_/$jobId'
+    | '/reviews_/$jobId'
+    | '/batches_/$batchId/review'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccuracyRoute: typeof AccuracyRoute
   BatchesRoute: typeof BatchesRoute
   JobsRoute: typeof JobsRoute
   PipelinesRoute: typeof PipelinesRoute
+  ReviewsRoute: typeof ReviewsRoute
   SchemasRoute: typeof SchemasRoute
   SettingsRoute: typeof SettingsRoute
   TemplatesRoute: typeof TemplatesRoute
   WebhooksRoute: typeof WebhooksRoute
   JobsJobIdRoute: typeof JobsJobIdRoute
+  ReviewsJobIdRoute: typeof ReviewsJobIdRoute
+  BatchesBatchIdReviewRoute: typeof BatchesBatchIdReviewRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/templates': {
-      id: '/templates'
-      path: '/templates'
-      fullPath: '/templates'
-      preLoaderRoute: typeof TemplatesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/webhooks': {
       id: '/webhooks'
       path: '/webhooks'
       fullPath: '/webhooks'
       preLoaderRoute: typeof WebhooksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/templates': {
+      id: '/templates'
+      path: '/templates'
+      fullPath: '/templates'
+      preLoaderRoute: typeof TemplatesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -175,6 +227,13 @@ declare module '@tanstack/react-router' {
       path: '/schemas'
       fullPath: '/schemas'
       preLoaderRoute: typeof SchemasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reviews': {
+      id: '/reviews'
+      path: '/reviews'
+      fullPath: '/reviews'
+      preLoaderRoute: typeof ReviewsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pipelines': {
@@ -198,11 +257,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BatchesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/accuracy': {
+      id: '/accuracy'
+      path: '/accuracy'
+      fullPath: '/accuracy'
+      preLoaderRoute: typeof AccuracyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reviews_/$jobId': {
+      id: '/reviews_/$jobId'
+      path: '/reviews/$jobId'
+      fullPath: '/reviews/$jobId'
+      preLoaderRoute: typeof ReviewsJobIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jobs_/$jobId': {
@@ -212,19 +285,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JobsJobIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/batches_/$batchId/review': {
+      id: '/batches_/$batchId/review'
+      path: '/batches/$batchId/review'
+      fullPath: '/batches/$batchId/review'
+      preLoaderRoute: typeof BatchesBatchIdReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccuracyRoute: AccuracyRoute,
   BatchesRoute: BatchesRoute,
   JobsRoute: JobsRoute,
   PipelinesRoute: PipelinesRoute,
+  ReviewsRoute: ReviewsRoute,
   SchemasRoute: SchemasRoute,
   SettingsRoute: SettingsRoute,
   TemplatesRoute: TemplatesRoute,
   WebhooksRoute: WebhooksRoute,
   JobsJobIdRoute: JobsJobIdRoute,
+  ReviewsJobIdRoute: ReviewsJobIdRoute,
+  BatchesBatchIdReviewRoute: BatchesBatchIdReviewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

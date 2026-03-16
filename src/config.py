@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     arq_max_retries: int = Field(default=3)
     arq_retry_delay: int = Field(default=60)
 
+    # Review / accuracy
+    review_confidence_threshold: float = 0.95  # Auto-approve above this
+    hint_refresh_threshold: int = 10  # Rebuild hints after N corrections
+    hint_min_corrections: int = 10  # Min corrections per field before hints
+
     # Upload storage
     upload_dir: str = "data/uploads"
 

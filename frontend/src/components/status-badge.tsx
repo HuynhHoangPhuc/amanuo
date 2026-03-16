@@ -9,6 +9,8 @@ const STATUS_STYLES: Record<string, string> = {
   processing: 'bg-blue-100 text-blue-800 border-blue-200',
   completed: 'bg-green-100 text-green-800 border-green-200',
   failed: 'bg-red-100 text-red-800 border-red-200',
+  pending_review: 'bg-purple-100 text-purple-800 border-purple-200',
+  reviewed: 'bg-teal-100 text-teal-800 border-teal-200',
   partial: 'bg-orange-100 text-orange-800 border-orange-200',
   success: 'bg-green-100 text-green-800 border-green-200',
   active: 'bg-green-100 text-green-800 border-green-200',

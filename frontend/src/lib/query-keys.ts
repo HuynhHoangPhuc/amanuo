@@ -31,6 +31,16 @@ export const queryKeys = {
     all: () => ['api-keys'] as const,
     list: () => ['api-keys', 'list'] as const,
   },
+  reviews: {
+    all: () => ['reviews'] as const,
+    list: (status?: string) => ['reviews', 'list', status] as const,
+    detail: (jobId: string) => ['reviews', 'detail', jobId] as const,
+  },
+  accuracy: {
+    all: () => ['accuracy'] as const,
+    schema: (schemaId: string) => ['accuracy', schemaId] as const,
+    fields: (schemaId: string) => ['accuracy', schemaId, 'fields'] as const,
+  },
   templates: {
     all: () => ['templates'] as const,
     list: (category?: string, lang?: string, search?: string) =>

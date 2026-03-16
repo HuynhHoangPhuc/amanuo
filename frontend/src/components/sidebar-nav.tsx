@@ -10,6 +10,8 @@ import {
   Webhook,
   Settings,
   LayoutGrid,
+  ClipboardCheck,
+  BarChart3,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -17,8 +19,10 @@ const NAV_ITEMS = [
   { to: '/schemas', label: 'Schemas', icon: FileText },
   { to: '/templates', label: 'Templates', icon: LayoutGrid },
   { to: '/jobs', label: 'Jobs', icon: Briefcase },
+  { to: '/reviews', label: 'Reviews', icon: ClipboardCheck },
   { to: '/pipelines', label: 'Pipelines', icon: GitBranch },
   { to: '/batches', label: 'Batches', icon: Layers },
+  { to: '/accuracy', label: 'Accuracy', icon: BarChart3 },
   { to: '/webhooks', label: 'Webhooks', icon: Webhook },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]

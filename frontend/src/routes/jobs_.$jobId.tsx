@@ -9,7 +9,7 @@ import { PageLayout } from '#/components/page-layout'
 import { StatusBadge } from '#/components/status-badge'
 import { JsonResultViewer } from '#/components/json-result-viewer'
 import { PageSkeleton } from '#/components/loading-skeleton'
-import { ArrowLeft, RefreshCw } from 'lucide-react'
+import { ArrowLeft, RefreshCw, ClipboardCheck } from 'lucide-react'
 
 export const Route = createFileRoute('/jobs_/$jobId')({ component: JobDetailPage })
 
@@ -42,6 +42,15 @@ function JobDetailPage() {
           <Link to="/jobs" className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900">
             <ArrowLeft size={14} /> Back
           </Link>
+          {job?.status === 'pending_review' && (
+            <Link
+              to="/reviews/$jobId"
+              params={{ jobId }}
+              className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              <ClipboardCheck size={14} /> Review
+            </Link>
+          )}
           <button
             onClick={() => refetch()}
             disabled={isFetching}
