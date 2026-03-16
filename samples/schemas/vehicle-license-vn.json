@@ -1,0 +1,11 @@
+[
+  {"label_name": "plate_number", "data_type": "plain text", "occurrence": "required once", "prompt_for_label": "Vehicle registration plate number"},
+  {"label_name": "owner_name", "data_type": "plain text", "occurrence": "required once", "prompt_for_label": "Full name of the vehicle owner"},
+  {"label_name": "address", "data_type": "address", "occurrence": "required once", "prompt_for_label": "Registered address of the owner"},
+  {"label_name": "brand", "data_type": "plain text", "occurrence": "required once", "prompt_for_label": "Vehicle brand/manufacturer"},
+  {"label_name": "model", "data_type": "plain text", "occurrence": "required once", "prompt_for_label": "Vehicle model name"},
+  {"label_name": "color", "data_type": "plain text", "occurrence": "required once", "prompt_for_label": "Exterior paint color of the vehicle"},
+  {"label_name": "engine_number", "data_type": "plain text", "occurrence": "required once", "prompt_for_label": "Engine serial number"},
+  {"label_name": "chassis_number", "data_type": "plain text", "occurrence": "required once", "prompt_for_label": "Chassis/frame serial number"},
+  {"label_name": "registration_date", "data_type": "datetime", "occurrence": "required once", "prompt_for_label": "Date of registration"}
+]

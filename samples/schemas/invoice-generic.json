@@ -1,0 +1,10 @@
+[
+  {"label_name": "invoice_number", "data_type": "plain text", "occurrence": "required once", "prompt_for_label": "Invoice number"},
+  {"label_name": "invoice_date", "data_type": "datetime", "occurrence": "required once", "prompt_for_label": "Invoice date"},
+  {"label_name": "seller_name", "data_type": "plain text", "occurrence": "required once", "prompt_for_label": "Seller/vendor company name"},
+  {"label_name": "buyer_name", "data_type": "plain text", "occurrence": "required once", "prompt_for_label": "Buyer/customer name"},
+  {"label_name": "line_items", "data_type": "plain text", "occurrence": "required multiple", "prompt_for_label": "Line item descriptions"},
+  {"label_name": "subtotal", "data_type": "currency", "occurrence": "required once", "prompt_for_label": "Subtotal before tax"},
+  {"label_name": "tax", "data_type": "currency", "occurrence": "optional once", "prompt_for_label": "Tax amount"},
+  {"label_name": "total", "data_type": "currency", "occurrence": "required once", "prompt_for_label": "Total amount due"}
+]

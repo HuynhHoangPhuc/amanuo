@@ -1,0 +1,10 @@
+[
+  {"label_name": "full_name", "data_type": "plain text", "occurrence": "required once", "prompt_for_label": "Full legal name"},
+  {"label_name": "id_number", "data_type": "plain text", "occurrence": "required once", "prompt_for_label": "ID card number"},
+  {"label_name": "date_of_birth", "data_type": "datetime", "occurrence": "required once", "prompt_for_label": "Date of birth"},
+  {"label_name": "gender", "data_type": "plain text", "occurrence": "required once", "prompt_for_label": "Gender"},
+  {"label_name": "nationality", "data_type": "plain text", "occurrence": "optional once", "prompt_for_label": "Nationality"},
+  {"label_name": "address", "data_type": "address", "occurrence": "required once", "prompt_for_label": "Permanent address"},
+  {"label_name": "issue_date", "data_type": "datetime", "occurrence": "required once", "prompt_for_label": "Date of issue"},
+  {"label_name": "expiry_date", "data_type": "datetime", "occurrence": "optional once", "prompt_for_label": "Expiration date"}
+]
