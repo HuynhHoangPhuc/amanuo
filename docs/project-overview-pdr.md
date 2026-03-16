@@ -142,14 +142,19 @@ Auth (API Key/JWT) → Workspace Scoping →
 
 ## Acceptance Criteria
 
-- [x] All 204 tests passing (148 unit + 56 E2E), 6.5s execution
-- [x] REST API (39 endpoints) functional with documented requests/responses
+- [x] All 243 tests passing (148 unit + 56 E2E + 39 new), ~6.5s execution
+- [x] REST API (42+ endpoints) functional with documented requests/responses
 - [x] Authentication: API key + JWT working, workspace isolation enforced
 - [x] Batch processing: multi-file upload, atomic status tracking, cancellation
 - [x] Pipeline engine: YAML parsing, executor, step registry, default pipeline
 - [x] Webhook system: event subscription, HMAC signing, retry backoff
 - [x] Schema versioning: semver auto-bump, compatibility checks, migration tracking
-- [x] Frontend: TanStack React app, all major workflows (jobs, batches, pipelines, webhooks)
+- [x] **SQLAlchemy ORM** with async sessions, migrations (alembic)
+- [x] **ARQ Job Queue** with Redis backend, standalone worker process
+- [x] **WebSocket Events** (Redis pub/sub) for real-time job/batch updates
+- [x] **Schema Suggest** using VLM, graceful degradation
+- [x] **Template Marketplace** with 4 curated templates + import
+- [x] Frontend: TanStack React app, all workflows (jobs, batches, pipelines, webhooks, templates, WebSocket)
 - [x] Cost tracking accurate for cloud providers
 - [x] Local fallback works when VLM unavailable
 - [x] Documentation complete (API, architecture, code standards, codebase summary)
@@ -162,7 +167,10 @@ Auth (API Key/JWT) → Workspace Scoping →
 | **Latency (Cloud)** | P95 <10s | Pass |
 | **Latency (Local)** | P95 <3s | Pass |
 | **Test Coverage** | 100% services, 95%+ pipelines | Pass |
-| **API Endpoints** | 39 documented routes | Complete |
-| **Database Tables** | 11 (up from 3) | Complete |
-| **Test Execution** | <7s total | 6.5s |
+| **API Endpoints** | 42+ documented routes | Complete |
+| **Database Tables** | 13 (ORM mapped, alembic managed) | Complete |
+| **Test Execution** | <7s total | ~6.5s |
 | **Workspace Isolation** | All queries filtered by workspace_id | Enforced |
+| **Job Queue** | ARQ Redis backend with fallback | Complete |
+| **Real-time Events** | WebSocket pub/sub, 30s heartbeat | Complete |
+| **Template Marketplace** | 4 curated templates, import/suggest | Complete |
