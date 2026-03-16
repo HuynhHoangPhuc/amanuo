@@ -21,17 +21,20 @@ Amanuo extracts structured data from documents using user-defined schemas. It ro
 - Accuracy tracking dashboard with per-field metrics
 - Schema auto-suggest & template marketplace
 - WebSocket real-time job/batch updates
-- ~106 test functions across 28 test files (~5,100 LOC), ~7.2s execution
+- Advanced analytics dashboard (cost tracking, usage, provider comparison)
+- ~338 test functions across 30 test files, ~5s execution
 
 ## Quick Start
 
 ### Prerequisites
 - Python 3.11+
 - `uv` package manager
+- **Redis** — required for job queue (ARQ) and WebSocket broadcaster
+- **PostgreSQL 16** — required for production; SQLite used for local dev (see below)
 - Local VLM (Ollama, vLLM, or llama.cpp) — optional but recommended
 - Cloud API keys (Gemini or Mistral) — optional
 
-### Setup (Backend + Frontend)
+### Setup — Local Dev (SQLite, no Docker)
 
 ```bash
 # Clone & install dependencies
@@ -39,8 +42,11 @@ git clone https://github.com/yourusername/amanuo.git
 cd amanuo
 uv sync
 
-# Copy environment template
+# Copy environment template (SQLite is the default DATABASE_URL)
 cp .env.example .env
+
+# Start Redis (required for job queue)
+redis-server &
 
 # Start API server (port 8000)
 uv run uvicorn src.main:app --reload
@@ -53,7 +59,16 @@ npm run dev
 # Open http://localhost:3000
 ```
 
-## API Endpoints (45+)
+### Setup — Docker (PostgreSQL + Redis)
+
+```bash
+# Starts app + PostgreSQL 16 + Redis via docker-compose
+docker-compose up
+
+# App auto-creates tables and seeds default workspace/API key on first start
+```
+
+## API Endpoints (50+)
 
 **Authentication & Authorization**
 
@@ -109,6 +124,14 @@ npm run dev
 | POST | `/webhooks/{id}/test` | Send test event |
 | GET | `/webhooks/{id}/deliveries` | View delivery log with retry status |
 
+**Analytics**
+
+| GET | `/analytics/overview` | Aggregated totals (jobs, cost, confidence, schemas) — `?period=7d\|30d\|90d` |
+| GET | `/analytics/usage` | Daily job volume by status |
+| GET | `/analytics/costs` | Daily cost breakdown by provider |
+| GET | `/analytics/providers` | Per-provider comparison (jobs, success rate, cost) |
+| POST | `/analytics/refresh` | Force-refresh PostgreSQL materialized views |
+
 **System & Real-Time**
 
 | GET | `/health` | Liveness + provider availability |
@@ -163,10 +186,10 @@ src/
   ├── models/           # Pydantic & ORM models
   ├── ui/               # Gradio web interface (optional)
   ├── config.py         # Settings & environment management
-  ├── database.py       # SQLite schema + initialization
+  ├── database.py       # SQLite/PostgreSQL schema + initialization
   └── main.py           # FastAPI app entry + lifespan
-frontend/               # TanStack React app (React 19, Tailwind CSS v4)
-tests/                  # 204 unit & E2E tests (6.5s)
+frontend/               # TanStack React app (React 19, Tailwind CSS v4, Recharts)
+tests/                  # 338 unit & E2E tests (~5s)
 docs/                   # Architecture, code standards, API docs
 samples/                # Example schemas (invoice, ID card, license)
 ```
@@ -176,8 +199,12 @@ samples/                # Example schemas (invoice, ID card, license)
 Set environment variables in `.env`:
 
 ```env
-# Database
+# Database — SQLite (local dev) or PostgreSQL (docker/production)
 DATABASE_URL=sqlite+aiosqlite:///./amanuo.db
+# DATABASE_URL=postgresql+asyncpg://amanuo:amanuo@localhost:5432/amanuo
+
+# Redis (required for job queue + WebSocket broadcaster)
+REDIS_URL=redis://localhost:6379/0
 
 # Authentication
 JWT_SECRET=your-secret-key
@@ -219,7 +246,7 @@ docker-compose up
 ## Running Tests
 
 ```bash
-# All tests (~106 test functions, ~7.2s total)
+# All tests (~338 test functions, ~5s total)
 uv run pytest
 
 # Unit tests only (fastest)
@@ -255,18 +282,17 @@ uv run pytest --cov=src --cov-report=html
 
 ## Roadmap
 
-**Completed Phases (1–6)**
+**Completed Phases (1–7)**
 - [x] Phase 1: Core OCR extraction + multi-workspace platform
 - [x] Phase 2: SQLAlchemy ORM migration + Redis/ARQ job queue
 - [x] Phase 3: WebSocket real-time events + template marketplace
 - [x] Phase 4: Human-in-the-loop review & correction UI
 - [x] Phase 5: Accuracy tracking + prompt hint generation
 - [x] Phase 6: Full TanStack React frontend + schema auto-suggest
+- [x] Phase 7: Advanced analytics — cost tracking, usage dashboards, provider comparison (PostgreSQL materialized views + Recharts)
 
-**Future Work (Phase 7+)**
+**Future Work**
 - [ ] Fine-tuning pipeline for custom models
-- [ ] PostgreSQL multi-node support
-- [ ] Advanced analytics & cost tracking per workspace
 - [ ] Document classification pre-processor
 - [ ] OAuth / social authentication
 - [ ] Multi-reviewer approval chains
