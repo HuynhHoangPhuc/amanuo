@@ -94,6 +94,15 @@ Amanuo is an adaptive hybrid OCR system for **structured document extraction** a
 - Frontend: analytics dashboard with usage area chart, cost bar chart, provider comparison chart
 - Tests: 15 unit tests + 10 E2E tests (total 338 tests)
 
+**Docker Containerization**
+- `Dockerfile` — Multi-stage Python build (uv builder → slim runtime)
+- `frontend/Dockerfile` — Multi-stage React build (node build → nginx serve)
+- `frontend/nginx.conf` — Reverse proxy config (API routes, SPA fallback, WebSocket upgrade)
+- `frontend/.dockerignore` — Excludes build artifacts and node_modules
+- `docker-compose.yml` — Production stack (app, frontend, redis, postgres)
+- `docker-compose.dev.yml` — Development stack (hot reload + Vite dev server)
+- `frontend/vite.config.ts` — DRY proxy configuration using VITE_API_URL env var
+
 **Frontend (TanStack)**
 - React 19 + TanStack Router (file-based) + TanStack Query + Tailwind CSS v4
 - Pages: Dashboard, Schemas, Jobs, Pipelines, Batches, Webhooks, Templates, Settings
@@ -185,6 +194,7 @@ Auth (API Key/JWT) → Workspace Scoping →
 - [x] **Template Marketplace** — 4 curated templates (Invoice EN/JP, Receipt, ID Card), import support
 - [x] **Advanced Analytics (Phase 7)** — 5 endpoints (usage, costs, providers, overview, refresh), PG materialized views, SQLite fallback, Recharts UI
 - [x] **Frontend (React 19)** — TanStack Router/Query, all workflows, WebSocket real-time updates, analytics dashboard
+- [x] **Docker Containerization** — Multi-stage builds, production/dev compose configs, nginx reverse proxy with SPA fallback
 - [x] **Cost tracking** — accurate token counts & USD estimates for Gemini/Mistral
 - [x] **Local fallback** — Ollama/vLLM → PaddleOCR → cloud, graceful degradation on all failures
 - [x] **Documentation** — README, PDR, system architecture, code standards, codebase summary

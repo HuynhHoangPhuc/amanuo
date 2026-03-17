@@ -128,7 +128,7 @@ amanuo/
 │       ├── gradio-app.py            # Gradio web interface (optional)
 │       └── ui-helpers.py            # Form builders, utilities
 │
-├── frontend/                         # React 19 + TanStack (28 files, ~2,600 LOC)
+├── frontend/                         # React 19 + TanStack (30 files, ~2,600 LOC)
 │   ├── src/
 │   │   ├── routes/                  # TanStack file-based routing
 │   │   │   ├── __root.tsx                   # Root layout (header, sidebar)
@@ -179,8 +179,12 @@ amanuo/
 │   ├── public/                       # Static assets (favicon, logos)
 │   ├── package.json                 # npm dependencies (React 19, TanStack, Tailwind, Vite)
 │   ├── tsconfig.json                # TypeScript config
-│   ├── vite.config.ts               # Vite build config (proxy to localhost:8000)
-│   └── index.html                   # HTML entry point
+│   ├── vite.config.ts               # Vite config (DRY proxy using VITE_API_URL env var, host: true for containers)
+│   ├── Dockerfile                   # Multi-stage build (node:22-alpine → nginx:alpine)
+│   ├── nginx.conf                   # nginx reverse proxy config (API routes, SPA fallback, WebSocket)
+│   ├── .dockerignore                # Excludes node_modules, dist, .git from image
+│   ├── index.html                   # HTML entry point
+│   └── dist/                         # Built React app (created by npm run build)
 │
 ├── tests/                            # 384 tests (191 unit + 10 E2E analytics), ~7s execution
 │   ├── conftest.py                  # Shared fixtures (db_with_analytics_jobs fixture)
@@ -227,8 +231,9 @@ amanuo/
 ├── .env.example                     # Configuration template
 ├── pyproject.toml                   # Project metadata, Python dependencies
 ├── uv.lock                          # Reproducible dependency lock
-├── Dockerfile                       # Container image
-├── docker-compose.yml               # Dev environment (Ollama, Postgres option)
+├── Dockerfile                       # Multi-stage Python build (builder → slim)
+├── docker-compose.yml               # Production: app, frontend (nginx), redis, postgres
+├── docker-compose.dev.yml           # Development: app (reload), frontend (Vite), redis, postgres
 ├── LICENSE                          # License file
 └── README.md                        # Project overview
 ```

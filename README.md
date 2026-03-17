@@ -61,13 +61,25 @@ npm run dev
 # Open http://localhost:3000
 ```
 
-### Setup — Docker (PostgreSQL + Redis)
+### Setup — Docker Compose
 
+**Production (Multi-stage builds, nginx reverse proxy):**
 ```bash
-# Starts app + PostgreSQL 16 + Redis via docker-compose
+# Starts: app (FastAPI:8000), frontend (nginx:80), redis, postgres
 docker-compose up
 
 # App auto-creates tables and seeds default workspace/API key on first start
+# Frontend accessible at http://localhost
+# Backend API at http://localhost/api or http://localhost:8000 directly
+```
+
+**Development (Vite hot-reload, uvicorn reload):**
+```bash
+# Starts: app (hot reload:8000), frontend (Vite dev:3000), redis, postgres
+docker-compose -f docker-compose.dev.yml up
+
+# Frontend at http://localhost:3000
+# Backend at http://localhost:8000
 ```
 
 ## API Endpoints (65+)
@@ -252,15 +264,31 @@ UPLOAD_DIR=data/uploads
 WEBHOOK_RETRY_BACKOFF=[60,300,1800,7200]  # Seconds: 1m, 5m, 30m, 2h
 ```
 
-## Docker Deployment
+## Docker Architecture
 
-```bash
-# Build image
-docker build -t amanuo:latest .
+**Production (`docker-compose.yml`):**
+- **app** — FastAPI (uvicorn, port 8000, multi-stage Python build)
+- **frontend** — nginx (port 80, serves built React SPA from dist/, proxies /api/* to app:8000, WebSocket upgrade support)
+- **redis** — Redis 7-alpine (for job queue + event broadcast)
+- **postgres** — PostgreSQL 16-alpine (persistent data)
 
-# Run with compose (includes Ollama service)
-docker-compose up
+**Development (`docker-compose.dev.yml`):**
+- **app** — FastAPI with `--reload` for code changes
+- **frontend** — Node.js 22-alpine running Vite dev server (http://app:8000 as VITE_API_URL)
+- **redis**, **postgres** — same as production
+
+**Environment Variables (docker-compose):**
+```env
+DATABASE_URL=postgresql+asyncpg://amanuo:amanuo@postgres:5432/amanuo
+REDIS_URL=redis://redis:6379/0
+BROADCASTER_URL=redis://redis:6379/0
 ```
+
+**Frontend Build:**
+- Multi-stage: `node:22-alpine` build → `nginx:alpine` serve
+- nginx config: API routes (/api/*, /schemas/*, /jobs/*, etc.) proxied to backend
+- SPA fallback: `try_files $uri $uri/ /index.html`
+- WebSocket: `proxy_http_version 1.1`, `Upgrade` header forwarding
 
 ## Running Tests
 

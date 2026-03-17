@@ -4,6 +4,14 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
+│                        Docker Compose Deployment Layer                       │
+├──────────────────────┬──────────────────────┬─────────────────┬────────────┤
+│  Frontend (nginx)    │  Backend (FastAPI)   │  Redis (ARQ)    │  PostgreSQL │
+│  Port 80 (prod)      │  Port 8000           │  Port 6379      │  Port 5432 │
+│  Port 3000 (dev)     │                      │                 │            │
+└──────────────────────┴──────────────────────┴─────────────────┴────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
 │                     FastAPI Backend + React Frontend                         │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
@@ -717,6 +725,71 @@ CREATE TABLE review_audit_log (
 );
 ```
 
+## Deployment Architecture
+
+### Production (`docker-compose.yml`)
+```
+┌──────────────────────┐
+│  nginx (port 80)     │  ← Single entry point for clients
+│  - Serves dist/      │    (production-built React SPA)
+│  - Proxies /api/*    │
+│  - Proxies /ws/*     │
+│  - SPA fallback      │
+└──────────────┬───────┘
+               ↓
+         ┌─────────────┐
+         │ app:8000    │
+         │ (FastAPI)   │
+         └─────┬───────┘
+               ↓
+      ┌────────────────┐
+      │  redis:6379    │
+      │  postgres:5432 │
+      └────────────────┘
+```
+
+**Stack:**
+- **Frontend Service** — `frontend/Dockerfile` (multi-stage: node build → nginx serve)
+  - Build stage: `node:22-alpine`, installs deps, runs `npm run build` → `dist/`
+  - Runtime stage: `nginx:alpine` serves `dist/` at port 80
+  - nginx config routes `/api/*`, `/schemas/*`, `/jobs/*`, etc. to backend app:8000
+  - SPA fallback: `try_files $uri $uri/ /index.html`
+  - WebSocket support: `Upgrade` header forwarding for `/ws/*`
+- **Backend Service** — `Dockerfile` (multi-stage: Python build → slim runtime)
+  - Build stage: Python 3.11-slim, installs dependencies via uv
+  - Runtime stage: Copies .venv, runs uvicorn on port 8000
+- **Redis** — `redis:7-alpine` with AOF persistence (port 6379, queue + event broadcast)
+- **PostgreSQL** — `postgres:16-alpine` (port 5432, persistent data + materialized views)
+
+### Development (`docker-compose.dev.yml`)
+```
+┌─────────────────────────────────────┐
+│  Vite dev server (port 3000)        │  ← Frontend with HMR
+│  VITE_API_URL=http://app:8000      │
+│  (node:22-alpine)                   │
+└────────────────┬────────────────────┘
+                 ↓
+         ┌──────────────────┐
+         │  app (port 8000) │
+         │  --reload        │  ← Hot reload on code changes
+         │  (FastAPI)       │
+         └────────┬─────────┘
+                  ↓
+      ┌────────────────┐
+      │  redis:6379    │
+      │  postgres:5432 │
+      └────────────────┘
+```
+
+**Stack:**
+- **Frontend** — `node:22-alpine` with Vite dev server (`npm run dev -- --host 0.0.0.0`)
+  - `VITE_API_URL=http://app:8000` (service name for Docker network)
+  - vite.config.ts uses env var: `const apiTarget = process.env.VITE_API_URL || 'http://localhost:8000'`
+  - Hot Module Replacement (HMR) for code changes
+  - node_modules isolated via named volume
+- **Backend** — Same `Dockerfile` but with `--reload` flag in docker-compose.dev.yml
+- **Redis**, **PostgreSQL** — Same as production
+
 ## Technology Stack
 
 ### Backend
@@ -736,6 +809,7 @@ CREATE TABLE review_audit_log (
 | **Local VLM** | Ollama, vLLM, llama.cpp | Privacy-preserving inference |
 | **OCR Fallback** | PaddleOCR | Text extraction fallback |
 | **HTTP Client** | httpx | Async HTTP requests (webhooks, providers) |
+| **Container** | Docker | Multi-stage builds for frontend & backend |
 
 ### Frontend
 | Component | Technology | Purpose |
@@ -747,6 +821,7 @@ CREATE TABLE review_audit_log (
 | **Build Tool** | Vite 7.0+ | Fast dev server, optimized builds |
 | **Language** | TypeScript 5.0+ | Type safety |
 | **HTTP Client** | Fetch API + wrapper | X-API-Key authentication |
+| **Web Server** | nginx-alpine | Reverse proxy, SPA routing, WebSocket upgrade |
 
 ## Module Dependencies
 
