@@ -1,4 +1,4 @@
-/** Sidebar navigation with active route highlighting. */
+/** Sidebar navigation with active route highlighting — theme-aware. */
 
 import { Link } from '@tanstack/react-router'
 import {
@@ -30,27 +30,33 @@ const NAV_ITEMS = [
   { to: '/analytics', label: 'Analytics', icon: TrendingUp },
   { to: '/webhooks', label: 'Webhooks', icon: Webhook },
   { to: '/settings', label: 'Settings', icon: Settings },
-]
+] as const
 
 const ADMIN_ITEMS = [
   { to: '/admin/policies', label: 'Policies', icon: Shield },
   { to: '/admin/users', label: 'Users', icon: Users },
-]
+] as const
 
-export function SidebarNav() {
+interface SidebarContentProps {
+  onNavigate?: () => void
+}
+
+/** Extracted nav content — used by both desktop sidebar and mobile Sheet. */
+export function SidebarContent({ onNavigate }: SidebarContentProps) {
   return (
-    <aside className="fixed left-0 top-0 h-full w-56 border-r border-gray-200 bg-white flex flex-col">
-      <div className="px-4 py-5 border-b border-gray-100">
-        <span className="text-lg font-bold text-gray-900">Amanuo</span>
-        <p className="text-xs text-gray-500 mt-0.5">OCR Platform</p>
+    <>
+      <div className="px-4 py-5 border-b border-sidebar-border">
+        <span className="text-lg font-bold text-sidebar-foreground">Amanuo</span>
+        <p className="text-xs text-muted-foreground mt-0.5">OCR Platform</p>
       </div>
       <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
         {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
           <Link
             key={to}
             to={to}
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
-            activeProps={{ className: 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm bg-blue-50 text-blue-700 font-medium' }}
+            onClick={onNavigate}
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            activeProps={{ className: 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm bg-primary/10 text-primary font-medium' }}
             activeOptions={to === '/' ? { exact: true } : undefined}
           >
             <Icon size={16} />
@@ -59,14 +65,15 @@ export function SidebarNav() {
         ))}
 
         {/* Admin section */}
-        <div className="pt-4 mt-4 border-t border-gray-100">
-          <p className="px-3 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">Admin</p>
+        <div className="pt-4 mt-4 border-t border-sidebar-border/50">
+          <p className="px-3 pb-1 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wide">Admin</p>
           {ADMIN_ITEMS.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
               to={to}
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
-              activeProps={{ className: 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm bg-blue-50 text-blue-700 font-medium' }}
+              onClick={onNavigate}
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              activeProps={{ className: 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm bg-primary/10 text-primary font-medium' }}
             >
               <Icon size={16} />
               {label}
@@ -74,6 +81,7 @@ export function SidebarNav() {
           ))}
         </div>
       </nav>
-    </aside>
+    </>
   )
 }
+
