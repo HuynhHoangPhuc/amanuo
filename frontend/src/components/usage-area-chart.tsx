@@ -18,7 +18,7 @@ interface Props {
 
 export function UsageAreaChart({ data }: Props) {
   if (data.length === 0) {
-    return <p className="text-sm text-gray-400 py-8 text-center">No data for this period.</p>
+    return <p className="text-sm text-muted-foreground/70 py-8 text-center">No data for this period.</p>
   }
   return (
     <ResponsiveContainer width="100%" height={280}>

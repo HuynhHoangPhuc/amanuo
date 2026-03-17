@@ -47,7 +47,7 @@ function buildChartData(data: DailyCostStat[]) {
 
 export function CostBarChart({ data }: Props) {
   if (data.length === 0) {
-    return <p className="text-sm text-gray-400 py-8 text-center">No cost data for this period.</p>
+    return <p className="text-sm text-muted-foreground/70 py-8 text-center">No cost data for this period.</p>
   }
   const { rows, providers } = buildChartData(data)
   return (

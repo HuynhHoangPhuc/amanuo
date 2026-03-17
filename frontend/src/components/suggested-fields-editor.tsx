@@ -7,9 +7,9 @@ const FIELD_TYPES = ['text', 'number', 'date', 'boolean'] as const
 const OCCURRENCES = ['required once', 'optional once', 'optional multiple'] as const
 
 function confidenceColor(score: number): string {
-  if (score >= 0.8) return 'bg-green-100 text-green-700'
-  if (score >= 0.5) return 'bg-yellow-100 text-yellow-700'
-  return 'bg-red-100 text-red-600'
+  if (score >= 0.8) return 'bg-green-500/15 text-green-700'
+  if (score >= 0.5) return 'bg-yellow-500/15 text-yellow-700'
+  return 'bg-red-500/15 text-red-600'
 }
 
 interface SuggestedFieldsEditorProps {
@@ -31,20 +31,20 @@ export function SuggestedFieldsEditor({ fields, onChange }: SuggestedFieldsEdito
       {fields.map((f, i) => (
         <div key={i} className="flex gap-2 items-center">
           <input
-            className="flex-1 min-w-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 min-w-0 rounded-lg border border-border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             placeholder="field_label"
             value={f.label}
             onChange={(e) => update(i, { label: e.target.value })}
           />
           <select
-            className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none"
+            className="rounded-lg border border-border px-2 py-1.5 text-sm focus:outline-none"
             value={f.type}
             onChange={(e) => update(i, { type: e.target.value as SuggestedField['type'] })}
           >
             {FIELD_TYPES.map((t) => <option key={t}>{t}</option>)}
           </select>
           <select
-            className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none"
+            className="rounded-lg border border-border px-2 py-1.5 text-sm focus:outline-none"
             value={f.occurrence}
             onChange={(e) => update(i, { occurrence: e.target.value })}
           >
@@ -65,7 +65,7 @@ export function SuggestedFieldsEditor({ fields, onChange }: SuggestedFieldsEdito
       <button
         type="button"
         onClick={addEmpty}
-        className="text-sm text-blue-600 hover:underline flex items-center gap-1 mt-1"
+        className="text-sm text-primary hover:underline flex items-center gap-1 mt-1"
       >
         <Plus size={14} /> Add field
       </button>

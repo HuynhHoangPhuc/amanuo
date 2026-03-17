@@ -20,13 +20,13 @@ const ToastContext = createContext<ToastContextValue | null>(null)
 const ICONS = {
   success: <CheckCircle size={16} className="text-green-500" />,
   error: <AlertCircle size={16} className="text-red-500" />,
-  info: <Info size={16} className="text-blue-500" />,
+  info: <Info size={16} className="text-primary" />,
 }
 
 const STYLES = {
-  success: 'border-green-200 bg-green-50',
-  error: 'border-red-200 bg-red-50',
-  info: 'border-blue-200 bg-blue-50',
+  success: 'border-green-500/20 bg-green-500/10',
+  error: 'border-red-500/20 bg-red-500/10',
+  info: 'border-primary/20 bg-primary/10',
 }
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
@@ -53,10 +53,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             className={`flex items-start gap-3 rounded-lg border p-3 shadow-md animate-in slide-in-from-bottom-2 ${STYLES[t.type]}`}
           >
             {ICONS[t.type]}
-            <p className="flex-1 text-sm text-gray-800">{t.message}</p>
+            <p className="flex-1 text-sm text-foreground">{t.message}</p>
             <button
               onClick={() => dismiss(t.id)}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-muted-foreground/70 hover:text-muted-foreground"
             >
               <X size={14} />
             </button>

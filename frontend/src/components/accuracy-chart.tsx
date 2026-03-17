@@ -8,7 +8,7 @@ interface AccuracyChartProps {
 
 export function AccuracyChart({ metrics }: AccuracyChartProps) {
   if (metrics.length === 0) {
-    return <p className="text-sm text-gray-400 py-8 text-center">No accuracy data yet.</p>
+    return <p className="text-sm text-muted-foreground/70 py-8 text-center">No accuracy data yet.</p>
   }
 
   // Sort chronologically and take last 30 points
