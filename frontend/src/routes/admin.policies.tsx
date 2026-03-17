@@ -41,15 +41,15 @@ function AdminPoliciesPage() {
   return (
     <PageLayout title="Approval Policies" actions={
       <button onClick={() => setShowForm(true)}
-        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">
         <Plus size={14} /> New Policy
       </button>
     }>
       {isLoading ? <PageSkeleton /> : (
         <div className="max-w-4xl space-y-6">
           {showForm && (
-            <div className="rounded-xl border border-gray-200 bg-white p-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Create Policy</h3>
+            <div className="rounded-xl border border-border bg-card p-4">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Create Policy</h3>
               <PolicyForm
                 onSubmit={(data) => createMutation.mutate(data)}
                 onCancel={() => setShowForm(false)}
@@ -62,27 +62,27 @@ function AdminPoliciesPage() {
           )}
 
           {policies && policies.length > 0 ? (
-            <div className="rounded-xl border border-gray-200 bg-white divide-y divide-gray-100">
+            <div className="rounded-xl border border-border bg-card divide-y divide-border">
               {policies.map((policy) => (
                 <div key={policy.id} className="flex items-center justify-between px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-gray-800">{policy.name}</span>
+                    <span className="text-sm font-medium text-foreground">{policy.name}</span>
                     <StatusBadge status={policy.policy_type === 'chain' ? 'processing' : 'pending_review'} />
-                    <span className="text-xs text-gray-400 capitalize">{policy.policy_type}</span>
+                    <span className="text-xs text-muted-foreground/70 capitalize">{policy.policy_type}</span>
                     {policy.deadline_hours && (
-                      <span className="text-xs text-gray-400">{policy.deadline_hours}h deadline</span>
+                      <span className="text-xs text-muted-foreground/70">{policy.deadline_hours}h deadline</span>
                     )}
                   </div>
                   <button onClick={() => deleteMutation.mutate(policy.id)}
                     disabled={deleteMutation.isPending}
-                    className="text-gray-400 hover:text-red-600 transition-colors">
+                    className="text-muted-foreground/70 hover:text-red-600 transition-colors">
                     <Trash2 size={14} />
                   </button>
                 </div>
               ))}
             </div>
           ) : !showForm && (
-            <p className="text-sm text-gray-400 py-8 text-center">No approval policies yet.</p>
+            <p className="text-sm text-muted-foreground/70 py-8 text-center">No approval policies yet.</p>
           )}
         </div>
       )}

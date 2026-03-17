@@ -52,11 +52,11 @@ function AccuracyDashboardPage() {
       title="Accuracy Dashboard"
       actions={
         <div className="flex items-center gap-2">
-          <BarChart3 size={16} className="text-gray-400" />
+          <BarChart3 size={16} className="text-muted-foreground/70" />
           <select
             value={selectedSchema}
             onChange={(e) => setSelectedSchema(e.target.value)}
-            className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="" disabled>Select schema...</option>
             {schemas.map((s) => (
@@ -67,7 +67,7 @@ function AccuracyDashboardPage() {
       }
     >
       {!selectedSchema ? (
-        <p className="text-sm text-gray-400 py-8">Select a schema to view accuracy metrics.</p>
+        <p className="text-sm text-muted-foreground/70 py-8">Select a schema to view accuracy metrics.</p>
       ) : loadingMetrics || loadingFields ? (
         <PageSkeleton />
       ) : (
@@ -87,14 +87,14 @@ function AccuracyDashboardPage() {
           )}
 
           {/* Accuracy trend chart */}
-          <section className="rounded-xl border border-gray-200 bg-white p-5">
-            <h2 className="text-sm font-semibold text-gray-700 mb-4">Accuracy Over Time</h2>
+          <section className="rounded-xl border border-border bg-card p-5">
+            <h2 className="text-sm font-semibold text-foreground mb-4">Accuracy Over Time</h2>
             <AccuracyChart metrics={metrics ?? []} />
           </section>
 
           {/* Field-level breakdown */}
           <section>
-            <h2 className="text-sm font-semibold text-gray-700 mb-3">Field-Level Accuracy</h2>
+            <h2 className="text-sm font-semibold text-foreground mb-3">Field-Level Accuracy</h2>
             <FieldAccuracyTable fieldAccuracy={fieldData?.field_accuracy ?? {}} />
           </section>
         </div>
@@ -113,14 +113,14 @@ function StatCard({
   color?: 'gray' | 'green' | 'blue' | 'yellow' | 'red'
 }) {
   const colorMap = {
-    gray: 'bg-gray-50 text-gray-700',
-    green: 'bg-green-50 text-green-700',
-    blue: 'bg-blue-50 text-blue-700',
-    yellow: 'bg-yellow-50 text-yellow-700',
-    red: 'bg-red-50 text-red-700',
+    gray: 'bg-muted text-foreground',
+    green: 'bg-green-500/10 text-green-700',
+    blue: 'bg-primary/10 text-primary',
+    yellow: 'bg-yellow-500/10 text-yellow-700',
+    red: 'bg-red-500/10 text-red-700',
   }
   return (
-    <div className={`rounded-xl border border-gray-200 p-4 ${colorMap[color]}`}>
+    <div className={`rounded-xl border border-border p-4 ${colorMap[color]}`}>
       <p className="text-xs font-medium opacity-70">{label}</p>
       <p className="text-2xl font-bold mt-1">{value}</p>
     </div>

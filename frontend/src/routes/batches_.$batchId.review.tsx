@@ -5,7 +5,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '#/lib/api-client'
 import { queryKeys } from '#/lib/query-keys'
-import type { BatchResponse, JobResponse, JobListResponse } from '#/lib/types'
+import type { BatchResponse, JobListResponse } from '#/lib/types'
 import { PageLayout } from '#/components/page-layout'
 import { StatusBadge } from '#/components/status-badge'
 import { PageSkeleton } from '#/components/loading-skeleton'
@@ -17,7 +17,7 @@ function BatchReviewPage() {
   const { batchId } = Route.useParams()
   const queryClient = useQueryClient()
 
-  const { data: batch } = useQuery({
+  const { data: _batch } = useQuery({
     queryKey: queryKeys.batches.detail(batchId),
     queryFn: () => api.get<BatchResponse>(`/batches/${batchId}`),
   })
@@ -82,7 +82,7 @@ function BatchReviewPage() {
       title="Batch Review"
       actions={
         <div className="flex items-center gap-3">
-          <Link to="/batches" className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900">
+          <Link to="/batches" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft size={14} /> Back
           </Link>
           <button
@@ -97,33 +97,33 @@ function BatchReviewPage() {
       {isLoading ? (
         <PageSkeleton />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Job</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Status</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Conf</th>
+              <tr className="border-b border-border bg-muted">
+                <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Job</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Status</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Conf</th>
                 {fieldLabels.map((label) => (
-                  <th key={label} className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                  <th key={label} className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">
                     {label}
                   </th>
                 ))}
-                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500">Action</th>
+                <th className="px-3 py-2 text-center text-xs font-medium text-muted-foreground">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border">
               {jobsData?.jobs.map((job) => {
                 const resultMap = Object.fromEntries(
                   job.result?.map((r) => [r.label, r]) ?? [],
                 )
                 return (
-                  <tr key={job.id} className="hover:bg-gray-50">
+                  <tr key={job.id} className="hover:bg-muted">
                     <td className="px-3 py-2">
                       <Link
                         to="/reviews/$jobId"
                         params={{ jobId: job.id }}
-                        className="font-mono text-xs text-blue-600 hover:underline"
+                        className="font-mono text-xs text-primary hover:underline"
                       >
                         {job.id.slice(0, 8)}
                       </Link>
@@ -145,9 +145,9 @@ function BatchReviewPage() {
                             onChange={(e) => handleCellEdit(job.id, label, e.target.value)}
                             className={`w-full rounded border px-2 py-1 text-xs ${
                               field && field.confidence < 0.85
-                                ? 'border-yellow-300 bg-yellow-50'
-                                : 'border-gray-200'
-                            } ${editedValue !== undefined ? 'ring-1 ring-blue-300' : ''}`}
+                                ? 'border-yellow-300 bg-yellow-500/10'
+                                : 'border-border'
+                            } ${editedValue !== undefined ? 'ring-1 ring-primary/30' : ''}`}
                           />
                         </td>
                       )
@@ -155,7 +155,7 @@ function BatchReviewPage() {
                     <td className="px-3 py-2 text-center">
                       <button
                         onClick={() => handleRowApprove(job.id)}
-                        className="rounded bg-green-100 p-1.5 text-green-700 hover:bg-green-200"
+                        className="rounded bg-green-500/15 p-1.5 text-green-700 hover:bg-green-200"
                         title="Approve row"
                       >
                         <Check size={14} />
@@ -167,7 +167,7 @@ function BatchReviewPage() {
             </tbody>
           </table>
           {(!jobsData?.jobs || jobsData.jobs.length === 0) && (
-            <p className="py-8 text-center text-sm text-gray-400">No jobs pending review in this batch.</p>
+            <p className="py-8 text-center text-sm text-muted-foreground/70">No jobs pending review in this batch.</p>
           )}
         </div>
       )}

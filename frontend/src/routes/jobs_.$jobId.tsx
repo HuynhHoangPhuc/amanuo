@@ -16,9 +16,9 @@ export const Route = createFileRoute('/jobs_/$jobId')({ component: JobDetailPage
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-4 py-2.5 border-b border-gray-50 last:border-0">
-      <span className="w-36 shrink-0 text-sm text-gray-500">{label}</span>
-      <span className="text-sm text-gray-900">{value}</span>
+    <div className="flex items-start gap-4 py-2.5 border-b border-border/30 last:border-0">
+      <span className="w-36 shrink-0 text-sm text-muted-foreground">{label}</span>
+      <span className="text-sm text-foreground">{value}</span>
     </div>
   )
 }
@@ -47,14 +47,14 @@ function JobDetailPage() {
       title="Job Detail"
       actions={
         <div className="flex items-center gap-2">
-          <Link to="/jobs" className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900">
+          <Link to="/jobs" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft size={14} /> Back
           </Link>
           {job?.status === 'pending_review' && (
             <Link
               to="/reviews/$jobId"
               params={{ jobId }}
-              className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
               <ClipboardCheck size={14} /> Review
             </Link>
@@ -62,7 +62,7 @@ function JobDetailPage() {
           <button
             onClick={() => refetch()}
             disabled={isFetching}
-            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted disabled:opacity-50"
           >
             <RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />
             Refresh
@@ -74,8 +74,8 @@ function JobDetailPage() {
         <PageSkeleton />
       ) : job ? (
         <div className="space-y-4 max-w-3xl">
-          <div className="rounded-xl border border-gray-200 bg-white p-5">
-            <h2 className="text-sm font-semibold text-gray-700 mb-3">Job Information</h2>
+          <div className="rounded-xl border border-border bg-card p-5">
+            <h2 className="text-sm font-semibold text-foreground mb-3">Job Information</h2>
             <InfoRow label="Job ID" value={<span className="font-mono text-xs">{job.id}</span>} />
             <InfoRow label="Status" value={<StatusBadge status={job.status} />} />
             <InfoRow label="Mode" value={job.mode} />
@@ -96,15 +96,15 @@ function JobDetailPage() {
           </div>
 
           {reviewStatus && (
-            <div className="rounded-xl border border-gray-200 bg-white p-5">
-              <h2 className="text-sm font-semibold text-gray-700 mb-3">Approval Progress</h2>
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h2 className="text-sm font-semibold text-foreground mb-3">Approval Progress</h2>
               <ApprovalProgress status={reviewStatus} />
             </div>
           )}
 
           {job.cost && (
-            <div className="rounded-xl border border-gray-200 bg-white p-5">
-              <h2 className="text-sm font-semibold text-gray-700 mb-3">Cost</h2>
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h2 className="text-sm font-semibold text-foreground mb-3">Cost</h2>
               <InfoRow label="Input tokens" value={job.cost.input_tokens.toLocaleString()} />
               <InfoRow label="Output tokens" value={job.cost.output_tokens.toLocaleString()} />
               <InfoRow label="Est. cost" value={`$${job.cost.estimated_cost_usd.toFixed(6)}`} />
@@ -116,14 +116,14 @@ function JobDetailPage() {
           )}
 
           {job.status === 'pending' || job.status === 'processing' ? (
-            <div className="flex items-center gap-2 text-sm text-blue-600">
+            <div className="flex items-center gap-2 text-sm text-primary">
               <RefreshCw size={14} className="animate-spin" />
               Auto-refreshing every 2s…
             </div>
           ) : null}
         </div>
       ) : (
-        <p className="text-gray-500">Job not found.</p>
+        <p className="text-muted-foreground">Job not found.</p>
       )}
     </PageLayout>
   )

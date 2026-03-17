@@ -61,8 +61,8 @@ function TemplatesPage() {
             onClick={() => setCategory(c)}
             className={`rounded-lg px-3 py-1.5 text-sm capitalize transition-colors ${
               category === c
-                ? 'bg-blue-600 text-white'
-                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-card border border-border text-muted-foreground hover:bg-muted'
             }`}
           >
             {c}
@@ -70,10 +70,10 @@ function TemplatesPage() {
         ))}
 
         {/* Search */}
-        <div className="ml-auto flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5">
-          <Search size={14} className="text-gray-400" />
+        <div className="ml-auto flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5">
+          <Search size={14} className="text-muted-foreground/70" />
           <input
-            className="text-sm focus:outline-none w-40 placeholder-gray-400"
+            className="text-sm focus:outline-none w-40 placeholder:text-muted-foreground"
             placeholder="Search templates…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -85,11 +85,11 @@ function TemplatesPage() {
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="rounded-xl border border-gray-100 bg-white h-36 animate-pulse" />
+            <div key={i} className="rounded-xl border border-border/50 bg-card h-36 animate-pulse" />
           ))}
         </div>
       ) : templates.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 bg-white py-16 text-center text-gray-400 text-sm">
+        <div className="rounded-xl border border-border bg-card py-16 text-center text-muted-foreground/70 text-sm">
           No templates found.
         </div>
       ) : (

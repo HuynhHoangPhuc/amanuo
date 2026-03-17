@@ -46,17 +46,17 @@ function AdminUsersPage() {
       {isLoading ? <PageSkeleton /> : (
         <div className="max-w-4xl">
           {users && users.length > 0 ? (
-            <div className="rounded-xl border border-gray-200 bg-white divide-y divide-gray-100">
+            <div className="rounded-xl border border-border bg-card divide-y divide-border">
               {users.map((user) => (
                 <div key={user.id} className="px-4 py-3">
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <span className="text-sm font-medium text-gray-800">{user.email}</span>
+                      <span className="text-sm font-medium text-foreground">{user.email}</span>
                       {user.display_name && (
-                        <span className="text-xs text-gray-400 ml-2">{user.display_name}</span>
+                        <span className="text-xs text-muted-foreground/70 ml-2">{user.display_name}</span>
                       )}
                     </div>
-                    <span className="text-xs text-gray-400">{new Date(user.created_at).toLocaleDateString()}</span>
+                    <span className="text-xs text-muted-foreground/70">{new Date(user.created_at).toLocaleDateString()}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     {user.roles.map((role) => (
@@ -65,7 +65,7 @@ function AdminUsersPage() {
                         <button
                           onClick={() => removeMutation.mutate({ userId: user.id, role })}
                           disabled={removeMutation.isPending}
-                          className="text-gray-300 hover:text-red-500 transition-colors"
+                          className="text-muted-foreground/50 hover:text-red-500 transition-colors"
                           title={`Remove ${role} role`}
                         >
                           <X size={12} />
@@ -81,7 +81,7 @@ function AdminUsersPage() {
                             assignMutation.mutate({ userId: user.id, role: e.target.value })
                           }
                         }}
-                        className="text-xs border border-gray-300 rounded px-1 py-0.5"
+                        className="text-xs border border-border rounded px-1 py-0.5"
                         autoFocus
                         onBlur={() => setAddingRole(null)}
                       >
@@ -93,7 +93,7 @@ function AdminUsersPage() {
                     ) : (
                       <button
                         onClick={() => setAddingRole({ userId: user.id, role: 'member' })}
-                        className="text-gray-300 hover:text-blue-500 transition-colors"
+                        className="text-muted-foreground/50 hover:text-primary transition-colors"
                         title="Add role"
                       >
                         <Plus size={14} />
@@ -104,7 +104,7 @@ function AdminUsersPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-400 py-8 text-center">No users found.</p>
+            <p className="text-sm text-muted-foreground/70 py-8 text-center">No users found.</p>
           )}
         </div>
       )}

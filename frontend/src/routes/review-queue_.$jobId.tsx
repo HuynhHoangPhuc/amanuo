@@ -43,24 +43,24 @@ function ReviewJobPage() {
         <div className="max-w-4xl space-y-6">
           {/* Approval progress */}
           {status && (
-            <div className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="rounded-xl border border-border bg-card p-4">
               <ApprovalProgress status={status} />
             </div>
           )}
 
           {/* Assignment list */}
           {status && (
-            <div className="rounded-xl border border-gray-200 bg-white p-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Assignments</h3>
+            <div className="rounded-xl border border-border bg-card p-4">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Assignments</h3>
               <div className="space-y-2">
                 {status.assignments.map((a) => (
                   <div key={a.id} className="flex items-center justify-between text-sm">
-                    <span className="font-mono text-xs text-gray-600">{a.user_id.slice(0, 8)}</span>
+                    <span className="font-mono text-xs text-muted-foreground">{a.user_id.slice(0, 8)}</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${
-                      a.status === 'approved' ? 'bg-green-50 text-green-700'
-                        : a.status === 'corrected' ? 'bg-blue-50 text-blue-700'
-                        : a.status === 'rejected' ? 'bg-red-50 text-red-700'
-                        : 'bg-gray-50 text-gray-600'
+                      a.status === 'approved' ? 'bg-green-500/10 text-green-700'
+                        : a.status === 'corrected' ? 'bg-primary/10 text-primary'
+                        : a.status === 'rejected' ? 'bg-red-500/10 text-red-700'
+                        : 'bg-muted text-muted-foreground'
                     }`}>
                       {a.status}
                     </span>
@@ -72,12 +72,12 @@ function ReviewJobPage() {
 
           {/* Review actions */}
           {submitMutation.isSuccess ? (
-            <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+            <div className="rounded-xl border border-green-500/20 bg-green-500/10 p-4 text-sm text-green-700 dark:text-green-400">
               Review submitted as <strong className="capitalize">{reviewStatus}</strong>.
             </div>
           ) : (
-            <div className="rounded-xl border border-gray-200 bg-white p-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Submit Review</h3>
+            <div className="rounded-xl border border-border bg-card p-4">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Submit Review</h3>
               <div className="flex gap-3">
                 <button
                   onClick={() => handleSubmit('approved')}
@@ -87,7 +87,7 @@ function ReviewJobPage() {
                 <button
                   onClick={() => handleSubmit('corrected')}
                   disabled={submitMutation.isPending}
-                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
                 >Submit Corrections</button>
                 <button
                   onClick={() => handleSubmit('rejected')}

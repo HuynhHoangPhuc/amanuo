@@ -19,12 +19,12 @@ function ProgressBar({ total, processed, failed }: { total: number; processed: n
   const failPct = total > 0 ? Math.round((failed / total) * 100) : 0
   return (
     <div className="space-y-1">
-      <div className="flex justify-between text-xs text-gray-500">
+      <div className="flex justify-between text-xs text-muted-foreground">
         <span>{processed}/{total} processed</span>
         <span>{pct}%</span>
       </div>
-      <div className="h-1.5 w-full rounded-full bg-gray-200 overflow-hidden flex">
-        <div className="h-full bg-green-500 transition-all" style={{ width: `${pct - failPct}%` }} />
+      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden flex">
+        <div className="h-full bg-green-500/100 transition-all" style={{ width: `${pct - failPct}%` }} />
         <div className="h-full bg-red-400 transition-all" style={{ width: `${failPct}%` }} />
       </div>
     </div>
@@ -48,15 +48,15 @@ function BatchRow({ batch }: { batch: BatchResponse }) {
   const isActive = batch.status === 'pending' || batch.status === 'processing'
 
   return (
-    <div className="border-b border-gray-50 last:border-0">
+    <div className="border-b border-border/30 last:border-0">
       <div
-        className="flex items-center gap-4 px-5 py-3 hover:bg-gray-50 cursor-pointer"
+        className="flex items-center gap-4 px-5 py-3 hover:bg-muted cursor-pointer"
         onClick={() => setExpanded(!expanded)}
       >
-        {expanded ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronRight size={14} className="text-gray-400" />}
+        {expanded ? <ChevronDown size={14} className="text-muted-foreground/70" /> : <ChevronRight size={14} className="text-muted-foreground/70" />}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-1.5">
-            <span className="font-mono text-xs text-gray-600">{batch.id.slice(0, 12)}…</span>
+            <span className="font-mono text-xs text-muted-foreground">{batch.id.slice(0, 12)}…</span>
             <StatusBadge status={batch.status} />
           </div>
           <ProgressBar
@@ -66,7 +66,7 @@ function BatchRow({ batch }: { batch: BatchResponse }) {
           />
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <span className="text-xs text-gray-400">{new Date(batch.created_at).toLocaleString()}</span>
+          <span className="text-xs text-muted-foreground/70">{new Date(batch.created_at).toLocaleString()}</span>
           {isActive && (
             <button
               onClick={(e) => { e.stopPropagation(); cancelMutation.mutate() }}
@@ -80,14 +80,14 @@ function BatchRow({ batch }: { batch: BatchResponse }) {
       </div>
       {expanded && batch.job_ids && batch.job_ids.length > 0 && (
         <div className="px-12 pb-3">
-          <p className="text-xs font-medium text-gray-500 mb-1.5">Job IDs</p>
+          <p className="text-xs font-medium text-muted-foreground mb-1.5">Job IDs</p>
           <div className="flex flex-wrap gap-1.5">
             {batch.job_ids.map((id) => (
               <Link
                 key={id}
                 to="/jobs/$jobId"
                 params={{ jobId: id }}
-                className="font-mono text-xs text-blue-600 hover:underline bg-blue-50 px-2 py-0.5 rounded"
+                className="font-mono text-xs text-primary hover:underline bg-primary/10 px-2 py-0.5 rounded"
               >
                 {id.slice(0, 8)}…
               </Link>
@@ -111,14 +111,14 @@ function BatchesPage() {
 
   return (
     <PageLayout title="Batches">
-      <div className="rounded-xl border border-gray-200 bg-white">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700">Batch Jobs</h2>
-          <span className="text-xs text-gray-400">{data?.total ?? 0} total</span>
+      <div className="rounded-xl border border-border bg-card">
+        <div className="px-5 py-4 border-b border-border/50 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Batch Jobs</h2>
+          <span className="text-xs text-muted-foreground/70">{data?.total ?? 0} total</span>
         </div>
         <div>
           {isLoading && Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="px-5 py-3 border-b border-gray-50">
+            <div key={i} className="px-5 py-3 border-b border-border/30">
               <TableRowSkeleton cols={1} />
             </div>
           ))}
@@ -126,7 +126,7 @@ function BatchesPage() {
             <BatchRow key={batch.id} batch={batch} />
           ))}
           {!isLoading && batches.length === 0 && (
-            <div className="px-5 py-10 text-center text-gray-400 text-sm">
+            <div className="px-5 py-10 text-center text-muted-foreground/70 text-sm">
               No batch jobs yet.
             </div>
           )}

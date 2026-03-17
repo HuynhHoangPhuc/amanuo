@@ -51,16 +51,16 @@ function AnalyticsDashboardPage() {
       title="Analytics"
       actions={
         <div className="flex items-center gap-2">
-          <TrendingUp size={16} className="text-gray-400" />
-          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+          <TrendingUp size={16} className="text-muted-foreground/70" />
+          <div className="flex rounded-lg border border-border overflow-hidden">
             {(['7d', '30d', '90d'] as Period[]).map((p) => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
                 className={`px-3 py-1.5 text-xs font-medium transition-colors ${
                   period === p
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-card text-muted-foreground hover:bg-muted'
                 }`}
               >
                 {p}
@@ -89,20 +89,20 @@ function AnalyticsDashboardPage() {
           )}
 
           {/* Usage over time */}
-          <section className="rounded-xl border border-gray-200 bg-white p-5">
-            <h2 className="text-sm font-semibold text-gray-700 mb-4">Usage Over Time</h2>
+          <section className="rounded-xl border border-border bg-card p-5">
+            <h2 className="text-sm font-semibold text-foreground mb-4">Usage Over Time</h2>
             <UsageAreaChart data={usage} />
           </section>
 
           {/* Cost breakdown */}
-          <section className="rounded-xl border border-gray-200 bg-white p-5">
-            <h2 className="text-sm font-semibold text-gray-700 mb-4">Cost Breakdown by Provider</h2>
+          <section className="rounded-xl border border-border bg-card p-5">
+            <h2 className="text-sm font-semibold text-foreground mb-4">Cost Breakdown by Provider</h2>
             <CostBarChart data={costs} />
           </section>
 
           {/* Provider comparison */}
-          <section className="rounded-xl border border-gray-200 bg-white p-5">
-            <h2 className="text-sm font-semibold text-gray-700 mb-4">Provider Comparison</h2>
+          <section className="rounded-xl border border-border bg-card p-5">
+            <h2 className="text-sm font-semibold text-foreground mb-4">Provider Comparison</h2>
             <ProviderComparisonChart data={providers} />
           </section>
         </div>
@@ -121,13 +121,13 @@ function StatCard({
   color?: 'gray' | 'blue' | 'green' | 'purple'
 }) {
   const colorMap = {
-    gray: 'bg-gray-50 text-gray-700',
-    blue: 'bg-blue-50 text-blue-700',
-    green: 'bg-green-50 text-green-700',
-    purple: 'bg-purple-50 text-purple-700',
+    gray: 'bg-muted text-foreground',
+    blue: 'bg-primary/10 text-primary',
+    green: 'bg-green-500/10 text-green-700',
+    purple: 'bg-purple-500/10 text-purple-700',
   }
   return (
-    <div className={`rounded-xl border border-gray-200 p-4 ${colorMap[color]}`}>
+    <div className={`rounded-xl border border-border p-4 ${colorMap[color]}`}>
       <p className="text-xs font-medium opacity-70">{label}</p>
       <p className="text-2xl font-bold mt-1">{value}</p>
     </div>

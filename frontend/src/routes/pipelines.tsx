@@ -49,28 +49,28 @@ function CreatePipelineForm({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-2xl rounded-xl bg-white shadow-xl p-6 space-y-4"
+        className="w-full max-w-2xl rounded-xl bg-card shadow-xl p-6 space-y-4"
       >
-        <h2 className="text-base font-semibold text-gray-900">New Pipeline</h2>
+        <h2 className="text-base font-semibold text-foreground">New Pipeline</h2>
         <input
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           placeholder="Pipeline name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
         />
         <input
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           placeholder="Description (optional)"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
             Config (YAML)
           </label>
           <textarea
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full rounded-lg border border-border px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-ring resize-none"
             rows={10}
             value={config}
             onChange={(e) => setConfig(e.target.value)}
@@ -82,14 +82,14 @@ function CreatePipelineForm({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
+            className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={mutation.isPending}
-            className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+            className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             {mutation.isPending ? 'Creating…' : 'Create'}
           </button>
@@ -125,7 +125,7 @@ function PipelinesPage() {
       actions={
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
+          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90"
         >
           <Plus size={14} /> New Pipeline
         </button>
@@ -135,24 +135,24 @@ function PipelinesPage() {
       <div className="space-y-3">
         {isLoading &&
           Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="rounded-xl border border-gray-200 bg-white p-4">
+            <div key={i} className="rounded-xl border border-border bg-card p-4">
               <TableRowSkeleton cols={1} />
             </div>
           ))}
         {!isLoading && pipelines.map((p) => (
-          <div key={p.id} className="rounded-xl border border-gray-200 bg-white">
+          <div key={p.id} className="rounded-xl border border-border bg-card">
             <div
-              className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-gray-50"
+              className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-muted"
               onClick={() => setExpanded(expanded === p.id ? null : p.id)}
             >
               <div>
-                <p className="font-medium text-gray-900 text-sm">{p.name}</p>
+                <p className="font-medium text-foreground text-sm">{p.name}</p>
                 {p.description && (
-                  <p className="text-xs text-gray-500 mt-0.5">{p.description}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{p.description}</p>
                 )}
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-muted-foreground/70">
                   {new Date(p.updated_at).toLocaleDateString()}
                 </span>
                 <button
@@ -164,8 +164,8 @@ function PipelinesPage() {
               </div>
             </div>
             {expanded === p.id && (
-              <div className="border-t border-gray-100 px-5 py-3">
-                <pre className="text-xs font-mono text-gray-700 bg-gray-50 rounded-lg p-3 overflow-auto max-h-48">
+              <div className="border-t border-border/50 px-5 py-3">
+                <pre className="text-xs font-mono text-foreground bg-muted rounded-lg p-3 overflow-auto max-h-48">
                   {p.config}
                 </pre>
               </div>
@@ -173,7 +173,7 @@ function PipelinesPage() {
           </div>
         ))}
         {!isLoading && pipelines.length === 0 && (
-          <div className="rounded-xl border border-gray-200 bg-white px-5 py-10 text-center text-gray-400 text-sm">
+          <div className="rounded-xl border border-border bg-card px-5 py-10 text-center text-muted-foreground/70 text-sm">
             No pipelines yet.
           </div>
         )}

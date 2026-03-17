@@ -104,7 +104,7 @@ function ReviewDetailPage() {
     <PageLayout
       title="Review Extraction"
       actions={
-        <Link to="/reviews" className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900">
+        <Link to="/reviews" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft size={14} /> Back to Queue
         </Link>
       }
@@ -116,16 +116,16 @@ function ReviewDetailPage() {
           {/* Side-by-side panels */}
           <div className="flex-1 grid grid-cols-2 gap-4 min-h-0">
             {/* Left: document viewer */}
-            <div className="rounded-xl border border-gray-200 bg-white overflow-hidden flex flex-col">
+            <div className="rounded-xl border border-border bg-card overflow-hidden flex flex-col">
               <DocumentViewer src={documentUrl} alt={`Document for job ${jobId}`} />
             </div>
 
             {/* Right: editable fields */}
-            <div className="rounded-xl border border-gray-200 bg-white overflow-auto p-5">
-              <h2 className="text-sm font-semibold text-gray-700 mb-4">
+            <div className="rounded-xl border border-border bg-card overflow-auto p-5">
+              <h2 className="text-sm font-semibold text-foreground mb-4">
                 Extraction Results
                 {job.confidence != null && (
-                  <span className="ml-2 text-xs font-normal text-gray-400">
+                  <span className="ml-2 text-xs font-normal text-muted-foreground/70">
                     Overall: {Math.round(job.confidence * 100)}%
                   </span>
                 )}
@@ -137,7 +137,7 @@ function ReviewDetailPage() {
                   modifiedFields={modifiedFields}
                 />
               ) : (
-                <p className="text-sm text-gray-400">No extraction results.</p>
+                <p className="text-sm text-muted-foreground/70">No extraction results.</p>
               )}
             </div>
           </div>
@@ -151,7 +151,7 @@ function ReviewDetailPage() {
           />
         </div>
       ) : (
-        <p className="text-gray-500">Job not found.</p>
+        <p className="text-muted-foreground">Job not found.</p>
       )}
     </PageLayout>
   )

@@ -30,7 +30,7 @@ function ReviewQueuePage() {
 
   return (
     <PageLayout title="Review Queue" actions={
-      <span className="text-sm text-gray-500">
+      <span className="text-sm text-muted-foreground">
         {pendingJobs?.total ?? 0} pending review
       </span>
     }>
@@ -40,25 +40,25 @@ function ReviewQueuePage() {
         <div className="space-y-6 max-w-4xl">
           {/* Pending review jobs */}
           <section>
-            <h2 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
               <ClipboardCheck size={16} /> Pending Review
             </h2>
             {pendingJobs?.jobs.length === 0 ? (
-              <p className="text-sm text-gray-400 py-4">No jobs awaiting review.</p>
+              <p className="text-sm text-muted-foreground/70 py-4">No jobs awaiting review.</p>
             ) : (
-              <div className="rounded-xl border border-gray-200 bg-white divide-y divide-gray-100">
+              <div className="rounded-xl border border-border bg-card divide-y divide-border">
                 {pendingJobs?.jobs.map((job) => (
                   <Link
                     key={job.id}
                     to="/reviews/$jobId"
                     params={{ jobId: job.id }}
-                    className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-between px-4 py-3 hover:bg-muted transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="font-mono text-xs text-gray-600">{job.id.slice(0, 8)}</span>
+                      <span className="font-mono text-xs text-muted-foreground">{job.id.slice(0, 8)}</span>
                       <StatusBadge status={job.status} />
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       {job.confidence != null && (
                         <span className={job.confidence < 0.85 ? 'text-yellow-600 font-medium' : ''}>
                           {Math.round(job.confidence * 100)}% conf
@@ -74,36 +74,36 @@ function ReviewQueuePage() {
 
           {/* Recent reviews */}
           <section>
-            <h2 className="text-sm font-semibold text-gray-700 mb-3">Recent Reviews</h2>
+            <h2 className="text-sm font-semibold text-foreground mb-3">Recent Reviews</h2>
             {reviews?.reviews.length === 0 ? (
-              <p className="text-sm text-gray-400 py-4">No reviews yet.</p>
+              <p className="text-sm text-muted-foreground/70 py-4">No reviews yet.</p>
             ) : (
-              <div className="rounded-xl border border-gray-200 bg-white divide-y divide-gray-100">
+              <div className="rounded-xl border border-border bg-card divide-y divide-border">
                 {reviews?.reviews.map((review) => (
                   <div
                     key={review.id}
                     className="flex items-center justify-between px-4 py-3"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="font-mono text-xs text-gray-600">
+                      <span className="font-mono text-xs text-muted-foreground">
                         {review.job_id.slice(0, 8)}
                       </span>
                       <span
                         className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                           review.status === 'approved'
-                            ? 'bg-green-50 text-green-700'
-                            : 'bg-blue-50 text-blue-700'
+                            ? 'bg-green-500/10 text-green-700'
+                            : 'bg-primary/10 text-primary'
                         }`}
                       >
                         {review.status}
                       </span>
                       {review.corrections && (
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-muted-foreground/70">
                           {review.corrections.length} correction(s)
                         </span>
                       )}
                     </div>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-muted-foreground">
                       {new Date(review.created_at).toLocaleDateString()}
                     </span>
                   </div>
