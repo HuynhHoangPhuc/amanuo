@@ -30,7 +30,7 @@ export function ConflictResolutionView({ conflicts, onResolve, isLoading }: Conf
         </p>
       </div>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="rounded-md border border-border bg-card overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted border-b border-border">

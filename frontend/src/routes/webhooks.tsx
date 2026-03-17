@@ -44,12 +44,12 @@ function CreateWebhookForm({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30">
       <form
         onSubmit={(e) => { e.preventDefault(); mutation.mutate({ url, events }) }}
-        className="w-full max-w-md rounded-xl bg-card shadow-xl p-6 space-y-4"
+        className="w-full max-w-md rounded-md bg-card shadow-xl p-6 space-y-4"
       >
         <h2 className="text-base font-semibold text-foreground">New Webhook</h2>
         <input
           type="url"
-          className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           placeholder="https://your-server.com/webhook"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
@@ -72,13 +72,13 @@ function CreateWebhookForm({ onClose }: { onClose: () => void }) {
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">
             Cancel
           </button>
           <button
             type="submit"
             disabled={mutation.isPending || events.length === 0}
-            className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             {mutation.isPending ? 'Creating…' : 'Create'}
           </button>
@@ -95,7 +95,7 @@ function DeliveryLog({ webhookId }: { webhookId: string }) {
   })
 
   return (
-    <div className="px-5 pb-3">
+    <div className="px-3 pb-2">
       <p className="text-xs font-medium text-muted-foreground mb-2">Recent Deliveries</p>
       {isLoading && <TableRowSkeleton cols={3} />}
       {!isLoading && deliveries.length === 0 && (
@@ -138,7 +138,7 @@ function WebhookRow({ webhook }: { webhook: WebhookSubscription }) {
   return (
     <div className="border-b border-border/30 last:border-0">
       <div
-        className="flex items-center gap-4 px-5 py-3 hover:bg-muted cursor-pointer"
+        className="flex items-center gap-4 px-3 py-2 hover:bg-muted cursor-pointer"
         onClick={() => setExpanded(!expanded)}
       >
         {expanded ? <ChevronDown size={14} className="text-muted-foreground/70" /> : <ChevronRight size={14} className="text-muted-foreground/70" />}
@@ -183,22 +183,22 @@ function WebhooksPage() {
       actions={
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90"
+          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90"
         >
           <Plus size={14} /> New Webhook
         </button>
       }
     >
       {showForm && <CreateWebhookForm onClose={() => setShowForm(false)} />}
-      <div className="rounded-xl border border-border bg-card">
+      <div className="rounded-md border border-border bg-card">
         {isLoading && Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="px-5 py-3 border-b border-border/30">
+          <div key={i} className="px-3 py-2 border-b border-border/30">
             <TableRowSkeleton cols={3} />
           </div>
         ))}
         {!isLoading && webhooks.map((w) => <WebhookRow key={w.id} webhook={w} />)}
         {!isLoading && webhooks.length === 0 && (
-          <div className="px-5 py-10 text-center text-muted-foreground/70 text-sm">
+          <div className="px-3 py-8 text-center text-muted-foreground/70 text-sm">
             No webhooks configured.
           </div>
         )}

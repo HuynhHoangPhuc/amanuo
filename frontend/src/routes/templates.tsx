@@ -59,7 +59,7 @@ function TemplatesPage() {
           <button
             key={c}
             onClick={() => setCategory(c)}
-            className={`rounded-lg px-3 py-1.5 text-sm capitalize transition-colors ${
+            className={`rounded-md px-3 py-1.5 text-sm capitalize transition-colors ${
               category === c
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-card border border-border text-muted-foreground hover:bg-muted'
@@ -70,7 +70,7 @@ function TemplatesPage() {
         ))}
 
         {/* Search */}
-        <div className="ml-auto flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5">
+        <div className="ml-auto flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5">
           <Search size={14} className="text-muted-foreground/70" />
           <input
             className="text-sm focus:outline-none w-40 placeholder:text-muted-foreground"
@@ -85,11 +85,11 @@ function TemplatesPage() {
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="rounded-xl border border-border/50 bg-card h-36 animate-pulse" />
+            <div key={i} className="rounded-md border border-border/50 bg-card h-36 animate-pulse" />
           ))}
         </div>
       ) : templates.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card py-16 text-center text-muted-foreground/70 text-sm">
+        <div className="rounded-md border border-border bg-card py-16 text-center text-muted-foreground/70 text-sm">
           No templates found.
         </div>
       ) : (

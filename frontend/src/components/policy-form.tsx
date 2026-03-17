@@ -49,7 +49,7 @@ export function PolicyForm({ onSubmit, onCancel, isLoading }: PolicyFormProps) {
         <label className="block text-sm font-medium text-foreground mb-1">Policy Name</label>
         <input
           type="text" value={name} onChange={(e) => setName(e.target.value)}
-          required className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:border-ring"
+          required className="w-full rounded-md border border-border px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:border-ring"
           placeholder="e.g. Legal Review Chain"
         />
       </div>
@@ -58,7 +58,7 @@ export function PolicyForm({ onSubmit, onCancel, isLoading }: PolicyFormProps) {
         <label className="block text-sm font-medium text-foreground mb-1">Type</label>
         <select
           value={policyType} onChange={(e) => setPolicyType(e.target.value as PolicyType)}
-          className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+          className="w-full rounded-md border border-border px-3 py-2 text-sm"
         >
           <option value="chain">Chain (sequential)</option>
           <option value="quorum">Quorum (M-of-N voting)</option>
@@ -78,7 +78,7 @@ export function PolicyForm({ onSubmit, onCancel, isLoading }: PolicyFormProps) {
                   next[i] = { ...step, role: e.target.value }
                   setSteps(next)
                 }}
-                className="flex-1 rounded-lg border border-border px-2 py-1.5 text-sm"
+                className="flex-1 rounded-md border border-border px-2 py-1.5 text-sm"
               >
                 <option value="reviewer">Reviewer</option>
                 <option value="approver">Approver</option>
@@ -90,7 +90,7 @@ export function PolicyForm({ onSubmit, onCancel, isLoading }: PolicyFormProps) {
                   next[i] = { ...step, label: e.target.value }
                   setSteps(next)
                 }}
-                className="flex-1 rounded-lg border border-border px-2 py-1.5 text-sm"
+                className="flex-1 rounded-md border border-border px-2 py-1.5 text-sm"
               />
               {steps.length > 1 && (
                 <button type="button" onClick={() => setSteps(steps.filter((_, j) => j !== i))}
@@ -109,13 +109,13 @@ export function PolicyForm({ onSubmit, onCancel, isLoading }: PolicyFormProps) {
             <label className="block text-sm font-medium text-foreground mb-1">Required approvals</label>
             <input type="number" min={1} value={required}
               onChange={(e) => setRequired(parseInt(e.target.value) || 1)}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm" />
+              className="w-full rounded-md border border-border px-3 py-2 text-sm" />
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Pool size</label>
             <input type="number" min={1} value={poolSize}
               onChange={(e) => setPoolSize(parseInt(e.target.value) || 1)}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm" />
+              className="w-full rounded-md border border-border px-3 py-2 text-sm" />
           </div>
         </div>
       )}
@@ -124,7 +124,7 @@ export function PolicyForm({ onSubmit, onCancel, isLoading }: PolicyFormProps) {
         <label className="block text-sm font-medium text-foreground mb-1">Deadline (hours, optional)</label>
         <input type="number" min={1} value={deadlineHours}
           onChange={(e) => setDeadlineHours(e.target.value)}
-          className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+          className="w-full rounded-md border border-border px-3 py-2 text-sm"
           placeholder="e.g. 48" />
       </div>
 
@@ -132,7 +132,7 @@ export function PolicyForm({ onSubmit, onCancel, isLoading }: PolicyFormProps) {
         <button type="button" onClick={onCancel}
           className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
         <button type="submit" disabled={isLoading || !name}
-          className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50">
+          className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50">
           {isLoading ? 'Creating...' : 'Create Policy'}
         </button>
       </div>

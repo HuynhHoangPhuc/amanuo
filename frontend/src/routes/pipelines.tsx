@@ -49,18 +49,18 @@ function CreatePipelineForm({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-2xl rounded-xl bg-card shadow-xl p-6 space-y-4"
+        className="w-full max-w-2xl rounded-md bg-card shadow-xl p-6 space-y-4"
       >
         <h2 className="text-base font-semibold text-foreground">New Pipeline</h2>
         <input
-          className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           placeholder="Pipeline name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
         />
         <input
-          className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           placeholder="Description (optional)"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -70,7 +70,7 @@ function CreatePipelineForm({ onClose }: { onClose: () => void }) {
             Config (YAML)
           </label>
           <textarea
-            className="w-full rounded-lg border border-border px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            className="w-full rounded-md border border-border px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-ring resize-none"
             rows={10}
             value={config}
             onChange={(e) => setConfig(e.target.value)}
@@ -82,14 +82,14 @@ function CreatePipelineForm({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted"
+            className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={mutation.isPending}
-            className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             {mutation.isPending ? 'Creating…' : 'Create'}
           </button>
@@ -125,7 +125,7 @@ function PipelinesPage() {
       actions={
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90"
+          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90"
         >
           <Plus size={14} /> New Pipeline
         </button>
@@ -135,14 +135,14 @@ function PipelinesPage() {
       <div className="space-y-3">
         {isLoading &&
           Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="rounded-xl border border-border bg-card p-4">
+            <div key={i} className="rounded-md border border-border bg-card p-4">
               <TableRowSkeleton cols={1} />
             </div>
           ))}
         {!isLoading && pipelines.map((p) => (
-          <div key={p.id} className="rounded-xl border border-border bg-card">
+          <div key={p.id} className="rounded-md border border-border bg-card">
             <div
-              className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-muted"
+              className="flex items-center justify-between px-3 py-3 cursor-pointer hover:bg-muted"
               onClick={() => setExpanded(expanded === p.id ? null : p.id)}
             >
               <div>
@@ -164,8 +164,8 @@ function PipelinesPage() {
               </div>
             </div>
             {expanded === p.id && (
-              <div className="border-t border-border/50 px-5 py-3">
-                <pre className="text-xs font-mono text-foreground bg-muted rounded-lg p-3 overflow-auto max-h-48">
+              <div className="border-t border-border/50 px-3 py-2">
+                <pre className="text-xs font-mono text-foreground bg-muted rounded-md p-3 overflow-auto max-h-48">
                   {p.config}
                 </pre>
               </div>
@@ -173,7 +173,7 @@ function PipelinesPage() {
           </div>
         ))}
         {!isLoading && pipelines.length === 0 && (
-          <div className="rounded-xl border border-border bg-card px-5 py-10 text-center text-muted-foreground/70 text-sm">
+          <div className="rounded-md border border-border bg-card px-3 py-8 text-center text-muted-foreground/70 text-sm">
             No pipelines yet.
           </div>
         )}

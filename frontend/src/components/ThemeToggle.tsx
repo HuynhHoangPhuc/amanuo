@@ -69,7 +69,7 @@ export default function ThemeToggle() {
       title={LABEL_MAP[mode]}
       className="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <Icon size={18} />
+      <Icon size={16} />
     </button>
   )
 }

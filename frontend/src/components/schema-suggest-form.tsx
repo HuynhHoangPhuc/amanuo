@@ -70,7 +70,7 @@ export function SchemaSuggestForm({ onClose }: SchemaSuggestFormProps) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30">
-      <div className="w-full max-w-xl rounded-xl bg-card shadow-xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div className="w-full max-w-xl rounded-md bg-card shadow-xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">Auto-Suggest Schema</h2>
           <button onClick={onClose} className="text-muted-foreground/70 hover:text-muted-foreground"><X size={16} /></button>
@@ -82,7 +82,7 @@ export function SchemaSuggestForm({ onClose }: SchemaSuggestFormProps) {
           onDragLeave={() => setIsDragging(false)}
           onDrop={handleDrop}
           onClick={() => fileRef.current?.click()}
-          className={`cursor-pointer rounded-xl border-2 border-dashed px-6 py-8 text-center transition-colors ${
+          className={`cursor-pointer rounded-md border-2 border-dashed px-6 py-8 text-center transition-colors ${
             isDragging ? 'border-primary/40 bg-primary/10' : 'border-border hover:border-border'
           }`}
         >
@@ -105,7 +105,7 @@ export function SchemaSuggestForm({ onClose }: SchemaSuggestFormProps) {
           <select
             value={lang}
             onChange={(e) => setLang(e.target.value)}
-            className="rounded-lg border border-border px-3 py-2 text-sm focus:outline-none"
+            className="rounded-md border border-border px-3 py-2 text-sm focus:outline-none"
           >
             <option value="en">English</option>
             <option value="ja">Japanese</option>
@@ -114,7 +114,7 @@ export function SchemaSuggestForm({ onClose }: SchemaSuggestFormProps) {
           <button
             onClick={() => file && analyzeMutation.mutate(file)}
             disabled={!file || analyzeMutation.isPending}
-            className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="flex-1 flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             {analyzeMutation.isPending ? (
               <><Loader2 size={14} className="animate-spin" /> Analyzing document…</>
@@ -125,14 +125,14 @@ export function SchemaSuggestForm({ onClose }: SchemaSuggestFormProps) {
         {suggestedFields !== null && (
           <>
             {/* Warning banner */}
-            <div className="flex gap-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3">
+            <div className="flex gap-2 rounded-md bg-yellow-500/10 border border-yellow-500/20 p-3">
               <AlertTriangle size={16} className="shrink-0 text-yellow-600 mt-0.5" />
               <p className="text-xs text-yellow-700">AI-suggested fields — please verify accuracy before saving.</p>
             </div>
 
             <div className="space-y-3">
               <input
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 placeholder="Schema name (required to save)"
                 value={schemaName}
                 onChange={(e) => setSchemaName(e.target.value)}
@@ -143,14 +143,14 @@ export function SchemaSuggestForm({ onClose }: SchemaSuggestFormProps) {
             <div className="flex justify-end gap-2 pt-2">
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted"
+                className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
                 disabled={!schemaName.trim() || !suggestedFields.length || saveMutation.isPending}
-                className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
                 {saveMutation.isPending ? 'Saving…' : 'Save as Schema'}
               </button>

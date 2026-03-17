@@ -158,8 +158,9 @@ amanuo/
 │   │   │   │   ├── table.tsx        # Table component
 │   │   │   │   ├── textarea.tsx     # Textarea field
 │   │   │   │   └── tooltip.tsx      # Tooltip (Radix Tooltip)
-│   │   │   ├── Header.tsx           # Top navigation (deleted static version)
-│   │   │   ├── SidebarNav.tsx       # Left sidebar with mobile hamburger (Sheet on <768px)
+│   │   │   ├── Header.tsx           # Top navigation + command palette trigger (⌘K)
+│   │   │   ├── SidebarNav.tsx       # Collapsible left sidebar with grouped nav + kbd hints (Sheet on <768px)
+│   │   │   ├── CommandPalette.tsx   # Command palette modal (⌘K / Ctrl+K)
 │   │   │   ├── PageLayout.tsx       # Common layout wrapper
 │   │   │   ├── json-result-viewer.tsx # JSON display component
 │   │   │   ├── document-viewer.tsx  # PDF/image viewer for reviews
@@ -177,8 +178,7 @@ amanuo/
 │   │   │   ├── status-badge.tsx     # Status indicator (refactored to use shadcn Badge)
 │   │   │   ├── role-badge.tsx       # Role indicator (uses shadcn Badge)
 │   │   │   ├── toast-provider.tsx   # Toast notifications
-│   │   │   ├── ThemeToggle.tsx      # Light/dark mode toggle (icon-only with Sun/Moon/Monitor)
-│   │   │   └── Footer.tsx           # Footer
+│   │   │   └── ThemeToggle.tsx      # Light/dark mode toggle (icon-only with Sun/Moon/Monitor)
 │   │   ├── lib/
 │   │   │   ├── utils.ts             # Tailwind utility helpers (cn, clsx merge)
 │   │   │   ├── api-client.ts        # HTTP client (X-API-Key auth)
@@ -188,8 +188,8 @@ amanuo/
 │   │   ├── main.tsx                 # React entry point
 │   │   ├── router.tsx               # TanStack Router setup
 │   │   ├── routeTree.gen.ts         # Auto-generated route tree
-│   │   └── styles.css               # Global styles (Tailwind v4 with Ocean theme tokens)
-│   ├── components.json              # shadcn/ui config (style: New York, baseColor: slate, tsx: true)
+│   │   └── styles.css               # Global styles (Tailwind v4 with Linear-inspired Zinc + Indigo theme tokens)
+│   ├── components.json              # shadcn/ui config (style: New York, baseColor: zinc, tsx: true)
 │   ├── public/                       # Static assets (favicon, logos)
 │   ├── package.json                 # npm dependencies (React 19, TanStack, Tailwind v4, shadcn/ui, Vite)
 │   ├── tsconfig.json                # TypeScript config
@@ -379,8 +379,9 @@ amanuo/
 | `routes/batches.tsx` | Batch tracking page |
 | `routes/pipelines.tsx` | Pipeline editor page |
 | `routes/webhooks.tsx` | Webhook configuration page |
-| `components/Header.tsx` | Top navigation, user menu |
-| `components/SidebarNav.tsx` | Left sidebar navigation |
+| `components/Header.tsx` | Top navigation, command palette trigger (⌘K) |
+| `components/SidebarNav.tsx` | Collapsible left sidebar with grouped nav sections + kbd hints |
+| `components/CommandPalette.tsx` | Command palette modal (⌘K / Ctrl+K) for quick navigation |
 | `lib/api-client.ts` | HTTP client with X-API-Key authentication |
 | `lib/query-keys.ts` | TanStack Query key factories |
 | `lib/types.ts` | TypeScript type definitions |
@@ -640,6 +641,7 @@ For each step in config:
 | **State** | @tanstack/react-query |
 | **Styling** | tailwindcss 4.0+ (with @tailwindcss/vite), postcss |
 | **Build** | vite 7.0+, typescript 5.0+ |
+| **Fonts** | Inter (sans-serif), JetBrains Mono (monospace) via CSS/Google Fonts |
 | **UI Library** | shadcn/ui 10 components (badge, button, card, input, select, sheet, skeleton, table, textarea, tooltip) |
 | **Component Primitives** | radix-ui 1.4.3, class-variance-authority (CVA), clsx, tailwind-merge |
 | **Icons** | lucide-react 0.545.0 (for ThemeToggle: Sun, Moon, Monitor) |

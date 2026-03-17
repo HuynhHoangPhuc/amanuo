@@ -87,7 +87,7 @@ function BatchReviewPage() {
           </Link>
           <button
             onClick={handleBulkApprove}
-            className="flex items-center gap-2 rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
+            className="flex items-center gap-2 rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
           >
             <CheckCheck size={14} /> Approve All Unchanged
           </button>
@@ -97,7 +97,7 @@ function BatchReviewPage() {
       {isLoading ? (
         <PageSkeleton />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border bg-card">
+        <div className="overflow-x-auto rounded-md border border-border bg-card">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted">

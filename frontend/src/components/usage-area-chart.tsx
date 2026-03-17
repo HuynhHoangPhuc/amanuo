@@ -37,7 +37,7 @@ export function UsageAreaChart({ data }: Props) {
             <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border, #e4e4e7)" />
         <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} />
         <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
         <Tooltip

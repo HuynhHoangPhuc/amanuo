@@ -35,14 +35,14 @@ function ReviewQueuePage() {
       </span>
     }>
       {isLoading ? <PageSkeleton /> : (
-        <div className="space-y-6 max-w-4xl">
+        <div className="space-y-4 max-w-4xl">
           {/* Approval workflow assignments */}
           {queue && queue.queue.length > 0 && (
             <section>
               <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
                 <ClipboardCheck size={16} /> My Assignments
               </h2>
-              <div className="rounded-xl border border-border bg-card divide-y divide-border">
+              <div className="rounded-md border border-border bg-card divide-y divide-border">
                 {queue.queue.map((item) => (
                   <Link
                     key={item.assignment_id}
@@ -52,7 +52,7 @@ function ReviewQueuePage() {
                   >
                     <div className="flex items-center gap-3">
                       <span className="font-mono text-xs text-muted-foreground">{item.job_id.slice(0, 8)}</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-700 font-medium capitalize">
+                      <span className="text-xs px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-700 font-medium capitalize">
                         {item.round_type}
                       </span>
                       <span className="text-xs text-muted-foreground/70">Round {item.round_number}</span>
@@ -76,7 +76,7 @@ function ReviewQueuePage() {
           {pendingJobs && pendingJobs.jobs.length > 0 && (
             <section>
               <h2 className="text-sm font-semibold text-foreground mb-3">Pending Review (Legacy)</h2>
-              <div className="rounded-xl border border-border bg-card divide-y divide-border">
+              <div className="rounded-md border border-border bg-card divide-y divide-border">
                 {pendingJobs.jobs.map((job) => (
                   <Link
                     key={job.id}

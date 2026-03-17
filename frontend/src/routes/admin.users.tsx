@@ -46,7 +46,7 @@ function AdminUsersPage() {
       {isLoading ? <PageSkeleton /> : (
         <div className="max-w-4xl">
           {users && users.length > 0 ? (
-            <div className="rounded-xl border border-border bg-card divide-y divide-border">
+            <div className="rounded-md border border-border bg-card divide-y divide-border">
               {users.map((user) => (
                 <div key={user.id} className="px-4 py-3">
                   <div className="flex items-center justify-between mb-2">

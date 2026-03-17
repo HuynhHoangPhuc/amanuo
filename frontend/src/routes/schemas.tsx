@@ -53,11 +53,11 @@ function CreateSchemaForm({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-lg rounded-xl bg-card shadow-xl p-6 space-y-4"
+        className="w-full max-w-lg rounded-md bg-card shadow-xl p-6 space-y-4"
       >
         <h2 className="text-base font-semibold text-foreground">New Schema</h2>
         <input
-          className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           placeholder="Schema name"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -67,21 +67,21 @@ function CreateSchemaForm({ onClose }: { onClose: () => void }) {
           {fields.map((f, i) => (
             <div key={i} className="flex gap-2 items-center">
               <input
-                className="flex-1 rounded-lg border border-border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="flex-1 rounded-md border border-border px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 placeholder="Field label"
                 value={f.label}
                 onChange={(e) => updateField(i, { label: e.target.value })}
                 required
               />
               <select
-                className="rounded-lg border border-border px-2 py-1.5 text-sm focus:outline-none"
+                className="rounded-md border border-border px-2 py-1.5 text-sm focus:outline-none"
                 value={f.type}
                 onChange={(e) => updateField(i, { type: e.target.value as SchemaField['type'] })}
               >
                 {FIELD_TYPES.map((t) => <option key={t}>{t}</option>)}
               </select>
               <select
-                className="rounded-lg border border-border px-2 py-1.5 text-sm focus:outline-none"
+                className="rounded-md border border-border px-2 py-1.5 text-sm focus:outline-none"
                 value={f.occurrence}
                 onChange={(e) => updateField(i, { occurrence: e.target.value as SchemaField['occurrence'] })}
               >
@@ -97,13 +97,13 @@ function CreateSchemaForm({ onClose }: { onClose: () => void }) {
           <Plus size={14} /> Add field
         </button>
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">
             Cancel
           </button>
           <button
             type="submit"
             disabled={mutation.isPending}
-            className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             {mutation.isPending ? 'Creating…' : 'Create'}
           </button>
@@ -140,19 +140,19 @@ function SchemasPage() {
         <div className="flex items-center gap-2">
           <Link
             to="/templates"
-            className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground hover:bg-muted"
+            className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground hover:bg-muted"
           >
             <LayoutGrid size={14} /> Browse Templates
           </Link>
           <button
             onClick={() => setShowSuggest(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-sm text-primary hover:bg-primary/15"
+            className="flex items-center gap-1.5 rounded-md border border-primary/20 bg-primary/10 px-3 py-2 text-sm text-primary hover:bg-primary/15"
           >
             <Sparkles size={14} /> Auto-Suggest
           </button>
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90"
+            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90"
           >
             <Plus size={14} /> New Schema
           </button>
@@ -161,24 +161,24 @@ function SchemasPage() {
     >
       {showForm && <CreateSchemaForm onClose={() => setShowForm(false)} />}
       {showSuggest && <SchemaSuggestForm onClose={() => setShowSuggest(false)} />}
-      <div className="rounded-xl border border-border bg-card">
+      <div className="rounded-md border border-border bg-card">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border/50 text-xs text-muted-foreground">
-              <th className="px-5 py-3 text-left font-medium">Name</th>
-              <th className="px-5 py-3 text-left font-medium">Fields</th>
-              <th className="px-5 py-3 text-left font-medium">Updated</th>
-              <th className="px-5 py-3 text-right font-medium">Actions</th>
+              <th className="px-3 py-2 text-left font-medium">Name</th>
+              <th className="px-3 py-2 text-left font-medium">Fields</th>
+              <th className="px-3 py-2 text-left font-medium">Updated</th>
+              <th className="px-3 py-2 text-right font-medium">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/50">
             {isLoading && Array.from({ length: 3 }).map((_, i) => <TableRowSkeleton key={i} cols={4} />)}
             {!isLoading && schemas.map((s) => (
               <tr key={s.id} className="hover:bg-muted">
-                <td className="px-5 py-3 font-medium text-foreground">{s.name}</td>
-                <td className="px-5 py-3 text-muted-foreground">{s.fields.length} fields</td>
-                <td className="px-5 py-3 text-muted-foreground text-xs">{new Date(s.updated_at).toLocaleString()}</td>
-                <td className="px-5 py-3 text-right">
+                <td className="px-3 py-2 font-medium text-foreground">{s.name}</td>
+                <td className="px-3 py-2 text-muted-foreground">{s.fields.length} fields</td>
+                <td className="px-3 py-2 text-muted-foreground text-xs">{new Date(s.updated_at).toLocaleString()}</td>
+                <td className="px-3 py-2 text-right">
                   <button
                     onClick={() => deleteMutation.mutate(s.id)}
                     className="text-red-400 hover:text-red-600 p-1"
@@ -191,7 +191,7 @@ function SchemasPage() {
             ))}
             {!isLoading && schemas.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-5 py-8 text-center text-muted-foreground/70">No schemas yet.</td>
+                <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground/70">No schemas yet.</td>
               </tr>
             )}
           </tbody>

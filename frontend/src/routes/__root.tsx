@@ -3,6 +3,7 @@
 import { Outlet, createRootRoute } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider } from '#/components/toast-provider'
+import { CommandPalette } from '#/components/command-palette'
 import { useRealtimeEvents } from '#/hooks/use-realtime-events'
 import '../styles.css'
 
@@ -23,6 +24,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
         <RealtimeConnector />
+        <CommandPalette />
         <Outlet />
       </ToastProvider>
     </QueryClientProvider>

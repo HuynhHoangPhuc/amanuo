@@ -17,7 +17,7 @@ export function DocumentViewer({ src, alt = 'Document' }: DocumentViewerProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted rounded-t-xl">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted rounded-t-md">
         <button
           onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))}
           className="p-1.5 rounded hover:bg-muted text-muted-foreground"
@@ -43,7 +43,7 @@ export function DocumentViewer({ src, alt = 'Document' }: DocumentViewerProps) {
       </div>
 
       {/* Document area */}
-      <div className="flex-1 overflow-auto bg-muted rounded-b-xl p-4 flex items-start justify-center min-h-[400px]">
+      <div className="flex-1 overflow-auto bg-muted rounded-b-md p-4 flex items-start justify-center min-h-[400px]">
         {isPdf ? (
           <iframe
             src={src}

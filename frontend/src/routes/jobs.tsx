@@ -40,7 +40,7 @@ function JobsPage() {
           <button
             key={f.value}
             onClick={() => setStatusFilter(f.value)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+            className={`rounded-md px-2.5 py-1 text-[12px] font-medium transition-colors ${
               statusFilter === f.value
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-card border border-border text-muted-foreground hover:bg-muted'
@@ -51,15 +51,15 @@ function JobsPage() {
         ))}
       </div>
 
-      <div className="rounded-xl border border-border bg-card">
+      <div className="rounded-md border border-border bg-card">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border/50 text-xs text-muted-foreground">
-              <th className="px-5 py-3 text-left font-medium">Job ID</th>
-              <th className="px-5 py-3 text-left font-medium">Status</th>
-              <th className="px-5 py-3 text-left font-medium">Mode</th>
-              <th className="px-5 py-3 text-left font-medium">Confidence</th>
-              <th className="px-5 py-3 text-left font-medium">Created</th>
+              <th className="px-3 py-2 text-left font-medium">Job ID</th>
+              <th className="px-3 py-2 text-left font-medium">Status</th>
+              <th className="px-3 py-2 text-left font-medium">Mode</th>
+              <th className="px-3 py-2 text-left font-medium">Confidence</th>
+              <th className="px-3 py-2 text-left font-medium">Created</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/50">
@@ -70,7 +70,7 @@ function JobsPage() {
             {!isLoading &&
               jobs.map((job) => (
                 <tr key={job.id} className="hover:bg-muted">
-                  <td className="px-5 py-3">
+                  <td className="px-3 py-2">
                     <Link
                       to="/jobs/$jobId"
                       params={{ jobId: job.id }}
@@ -79,23 +79,23 @@ function JobsPage() {
                       {job.id.slice(0, 12)}…
                     </Link>
                   </td>
-                  <td className="px-5 py-3">
+                  <td className="px-3 py-2">
                     <StatusBadge status={job.status as JobStatus} />
                   </td>
-                  <td className="px-5 py-3 text-muted-foreground">{job.mode}</td>
-                  <td className="px-5 py-3 text-muted-foreground">
+                  <td className="px-3 py-2 text-muted-foreground">{job.mode}</td>
+                  <td className="px-3 py-2 text-muted-foreground">
                     {job.confidence != null
                       ? `${Math.round(job.confidence * 100)}%`
                       : '—'}
                   </td>
-                  <td className="px-5 py-3 text-xs text-muted-foreground">
+                  <td className="px-3 py-2 text-xs text-muted-foreground">
                     {new Date(job.created_at).toLocaleString()}
                   </td>
                 </tr>
               ))}
             {!isLoading && jobs.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-5 py-8 text-center text-muted-foreground/70">
+                <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground/70">
                   No jobs found.
                 </td>
               </tr>

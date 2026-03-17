@@ -41,14 +41,14 @@ function AdminPoliciesPage() {
   return (
     <PageLayout title="Approval Policies" actions={
       <button onClick={() => setShowForm(true)}
-        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90">
+        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90">
         <Plus size={14} /> New Policy
       </button>
     }>
       {isLoading ? <PageSkeleton /> : (
-        <div className="max-w-4xl space-y-6">
+        <div className="max-w-4xl space-y-4">
           {showForm && (
-            <div className="rounded-xl border border-border bg-card p-4">
+            <div className="rounded-md border border-border bg-card p-4">
               <h3 className="text-sm font-semibold text-foreground mb-3">Create Policy</h3>
               <PolicyForm
                 onSubmit={(data) => createMutation.mutate(data)}
@@ -62,7 +62,7 @@ function AdminPoliciesPage() {
           )}
 
           {policies && policies.length > 0 ? (
-            <div className="rounded-xl border border-border bg-card divide-y divide-border">
+            <div className="rounded-md border border-border bg-card divide-y divide-border">
               {policies.map((policy) => (
                 <div key={policy.id} className="flex items-center justify-between px-4 py-3">
                   <div className="flex items-center gap-3">

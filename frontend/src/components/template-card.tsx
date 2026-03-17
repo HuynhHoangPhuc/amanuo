@@ -20,7 +20,7 @@ export function TemplateCard({ template, onImport, importing }: TemplateCardProp
   const categoryColor = CATEGORY_COLORS[template.category] ?? CATEGORY_COLORS.other
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 flex flex-col gap-3 hover:shadow-sm transition-shadow">
+    <div className="rounded-md border border-border bg-card p-4 flex flex-col gap-3 hover:bg-accent/50 transition-colors">
       <div className="flex items-start justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold text-foreground leading-tight">{template.name}</h3>
@@ -53,7 +53,7 @@ export function TemplateCard({ template, onImport, importing }: TemplateCardProp
         <button
           onClick={() => onImport(template.id)}
           disabled={importing}
-          className="rounded-lg bg-primary px-3 py-1.5 text-xs text-white font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          className="rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
         >
           {importing ? 'Importing…' : 'Import'}
         </button>

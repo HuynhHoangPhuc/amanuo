@@ -50,7 +50,7 @@ function BatchRow({ batch }: { batch: BatchResponse }) {
   return (
     <div className="border-b border-border/30 last:border-0">
       <div
-        className="flex items-center gap-4 px-5 py-3 hover:bg-muted cursor-pointer"
+        className="flex items-center gap-4 px-3 py-2 hover:bg-muted cursor-pointer"
         onClick={() => setExpanded(!expanded)}
       >
         {expanded ? <ChevronDown size={14} className="text-muted-foreground/70" /> : <ChevronRight size={14} className="text-muted-foreground/70" />}
@@ -111,14 +111,14 @@ function BatchesPage() {
 
   return (
     <PageLayout title="Batches">
-      <div className="rounded-xl border border-border bg-card">
-        <div className="px-5 py-4 border-b border-border/50 flex items-center justify-between">
+      <div className="rounded-md border border-border bg-card">
+        <div className="px-3 py-2 border-b border-border/50 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-foreground">Batch Jobs</h2>
           <span className="text-xs text-muted-foreground/70">{data?.total ?? 0} total</span>
         </div>
         <div>
           {isLoading && Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="px-5 py-3 border-b border-border/30">
+            <div key={i} className="px-3 py-2 border-b border-border/30">
               <TableRowSkeleton cols={1} />
             </div>
           ))}
@@ -126,7 +126,7 @@ function BatchesPage() {
             <BatchRow key={batch.id} batch={batch} />
           ))}
           {!isLoading && batches.length === 0 && (
-            <div className="px-5 py-10 text-center text-muted-foreground/70 text-sm">
+            <div className="px-3 py-8 text-center text-muted-foreground/70 text-sm">
               No batch jobs yet.
             </div>
           )}

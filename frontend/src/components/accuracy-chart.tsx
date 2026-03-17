@@ -46,14 +46,14 @@ export function AccuracyChart({ metrics }: AccuracyChartProps) {
         ))}
 
         {/* Line */}
-        <polyline fill="none" stroke="#3b82f6" strokeWidth={2} points={points} />
+        <polyline fill="none" stroke="var(--chart-1, #6366f1)" strokeWidth={2} points={points} />
 
         {/* Data points */}
         {sorted.map((m, i) => (
           <circle
             key={i}
             cx={xScale(i)} cy={yScale(m.accuracy_pct)}
-            r={3} fill="#3b82f6"
+            r={3} fill="var(--chart-1, #6366f1)"
           >
             <title>{`${m.period_end.slice(0, 10)}: ${m.accuracy_pct.toFixed(1)}%`}</title>
           </circle>

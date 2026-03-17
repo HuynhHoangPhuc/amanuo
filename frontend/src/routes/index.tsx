@@ -16,21 +16,17 @@ function StatCard({
   label,
   value,
   icon: Icon,
-  color,
 }: {
   label: string
   value: number
   icon: React.ElementType
-  color: string
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5 flex items-center gap-4">
-      <div className={`rounded-lg p-2 ${color}`}>
-        <Icon size={20} />
-      </div>
+    <div className="rounded-md border border-border bg-card px-4 py-3 flex items-center gap-3">
+      <Icon size={16} className="text-muted-foreground" />
       <div>
-        <p className="text-2xl font-bold text-foreground">{value}</p>
-        <p className="text-sm text-muted-foreground">{label}</p>
+        <p className="text-xl font-semibold text-foreground tabular-nums">{value}</p>
+        <p className="text-[11px] text-muted-foreground">{label}</p>
       </div>
     </div>
   )
@@ -53,48 +49,48 @@ function DashboardPage() {
   return (
     <PageLayout title="Dashboard">
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 mb-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-4">
           {Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={i} />)}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 mb-6">
-          <StatCard label="Total Jobs" value={stats.total} icon={Briefcase} color="bg-primary/10 text-primary" />
-          <StatCard label="Completed" value={stats.completed} icon={CheckCircle} color="bg-green-500/10 text-green-600" />
-          <StatCard label="In Progress" value={stats.pending} icon={Clock} color="bg-yellow-500/10 text-yellow-600" />
-          <StatCard label="Failed" value={stats.failed} icon={XCircle} color="bg-red-500/10 text-red-600" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-4">
+          <StatCard label="Total Jobs" value={stats.total} icon={Briefcase} />
+          <StatCard label="Completed" value={stats.completed} icon={CheckCircle} />
+          <StatCard label="In Progress" value={stats.pending} icon={Clock} />
+          <StatCard label="Failed" value={stats.failed} icon={XCircle} />
         </div>
       )}
 
-      <div className="rounded-xl border border-border bg-card">
-        <div className="px-5 py-4 border-b border-border/50 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">Recent Jobs</h2>
-          <Link to="/jobs" className="text-xs text-primary hover:underline">View all</Link>
+      <div className="rounded-md border border-border bg-card">
+        <div className="px-3 py-2 border-b border-border flex items-center justify-between">
+          <h2 className="text-[13px] font-semibold text-foreground">Recent Jobs</h2>
+          <Link to="/jobs" className="text-[11px] text-primary hover:underline">View all</Link>
         </div>
-        <table className="w-full text-sm">
+        <table className="w-full text-[13px]">
           <thead>
-            <tr className="border-b border-border/50 text-xs text-muted-foreground">
-              <th className="px-5 py-2 text-left font-medium">ID</th>
-              <th className="px-5 py-2 text-left font-medium">Status</th>
-              <th className="px-5 py-2 text-left font-medium">Mode</th>
-              <th className="px-5 py-2 text-left font-medium">Created</th>
+            <tr className="border-b border-border">
+              <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">ID</th>
+              <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Status</th>
+              <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Mode</th>
+              <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Created</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border/50">
+          <tbody>
             {jobs.slice(0, 8).map((job) => (
-              <tr key={job.id} className="hover:bg-muted">
-                <td className="px-5 py-2.5">
-                  <Link to="/jobs/$jobId" params={{ jobId: job.id }} className="font-mono text-xs text-primary hover:underline">
+              <tr key={job.id} className="h-9 border-b border-border/50 hover:bg-accent transition-colors">
+                <td className="px-3 py-0">
+                  <Link to="/jobs/$jobId" params={{ jobId: job.id }} className="font-mono text-[12px] text-primary hover:underline">
                     {job.id.slice(0, 8)}…
                   </Link>
                 </td>
-                <td className="px-5 py-2.5"><StatusBadge status={job.status} /></td>
-                <td className="px-5 py-2.5 text-muted-foreground">{job.mode}</td>
-                <td className="px-5 py-2.5 text-muted-foreground text-xs">{new Date(job.created_at).toLocaleString()}</td>
+                <td className="px-3 py-0"><StatusBadge status={job.status} /></td>
+                <td className="px-3 py-0 text-muted-foreground">{job.mode}</td>
+                <td className="px-3 py-0 text-muted-foreground text-[12px]">{new Date(job.created_at).toLocaleString()}</td>
               </tr>
             ))}
             {!isLoading && jobs.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-5 py-8 text-center text-muted-foreground/70 text-sm">No jobs yet. Submit a document to get started.</td>
+                <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground/70 text-[13px]">No jobs yet. Submit a document to get started.</td>
               </tr>
             )}
           </tbody>

@@ -56,7 +56,7 @@ function AccuracyDashboardPage() {
           <select
             value={selectedSchema}
             onChange={(e) => setSelectedSchema(e.target.value)}
-            className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="rounded-md border border-border px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="" disabled>Select schema...</option>
             {schemas.map((s) => (
@@ -71,7 +71,7 @@ function AccuracyDashboardPage() {
       ) : loadingMetrics || loadingFields ? (
         <PageSkeleton />
       ) : (
-        <div className="space-y-6 max-w-4xl">
+        <div className="space-y-4 max-w-4xl">
           {/* Overview stats */}
           {fieldData && (
             <div className="grid grid-cols-4 gap-4">
@@ -87,7 +87,7 @@ function AccuracyDashboardPage() {
           )}
 
           {/* Accuracy trend chart */}
-          <section className="rounded-xl border border-border bg-card p-5">
+          <section className="rounded-md border border-border bg-card p-4">
             <h2 className="text-sm font-semibold text-foreground mb-4">Accuracy Over Time</h2>
             <AccuracyChart metrics={metrics ?? []} />
           </section>
@@ -120,9 +120,9 @@ function StatCard({
     red: 'bg-red-500/10 text-red-700',
   }
   return (
-    <div className={`rounded-xl border border-border p-4 ${colorMap[color]}`}>
+    <div className={`rounded-md border border-border p-4 ${colorMap[color]}`}>
       <p className="text-xs font-medium opacity-70">{label}</p>
-      <p className="text-2xl font-bold mt-1">{value}</p>
+      <p className="text-xl font-semibold mt-1">{value}</p>
     </div>
   )
 }

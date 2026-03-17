@@ -52,7 +52,7 @@ function AnalyticsDashboardPage() {
       actions={
         <div className="flex items-center gap-2">
           <TrendingUp size={16} className="text-muted-foreground/70" />
-          <div className="flex rounded-lg border border-border overflow-hidden">
+          <div className="flex rounded-md border border-border overflow-hidden">
             {(['7d', '30d', '90d'] as Period[]).map((p) => (
               <button
                 key={p}
@@ -73,7 +73,7 @@ function AnalyticsDashboardPage() {
       {isLoading ? (
         <PageSkeleton />
       ) : (
-        <div className="space-y-6 max-w-5xl">
+        <div className="space-y-4 max-w-5xl">
           {/* Overview stat cards */}
           {overview && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -89,19 +89,19 @@ function AnalyticsDashboardPage() {
           )}
 
           {/* Usage over time */}
-          <section className="rounded-xl border border-border bg-card p-5">
+          <section className="rounded-md border border-border bg-card p-4">
             <h2 className="text-sm font-semibold text-foreground mb-4">Usage Over Time</h2>
             <UsageAreaChart data={usage} />
           </section>
 
           {/* Cost breakdown */}
-          <section className="rounded-xl border border-border bg-card p-5">
+          <section className="rounded-md border border-border bg-card p-4">
             <h2 className="text-sm font-semibold text-foreground mb-4">Cost Breakdown by Provider</h2>
             <CostBarChart data={costs} />
           </section>
 
           {/* Provider comparison */}
-          <section className="rounded-xl border border-border bg-card p-5">
+          <section className="rounded-md border border-border bg-card p-4">
             <h2 className="text-sm font-semibold text-foreground mb-4">Provider Comparison</h2>
             <ProviderComparisonChart data={providers} />
           </section>
@@ -127,9 +127,9 @@ function StatCard({
     purple: 'bg-purple-500/10 text-purple-700',
   }
   return (
-    <div className={`rounded-xl border border-border p-4 ${colorMap[color]}`}>
+    <div className={`rounded-md border border-border p-4 ${colorMap[color]}`}>
       <p className="text-xs font-medium opacity-70">{label}</p>
-      <p className="text-2xl font-bold mt-1">{value}</p>
+      <p className="text-xl font-semibold mt-1">{value}</p>
     </div>
   )
 }

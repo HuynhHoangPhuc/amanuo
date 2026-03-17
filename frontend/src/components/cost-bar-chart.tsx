@@ -18,10 +18,10 @@ interface Props {
 
 // Stable provider → color mapping
 const PROVIDER_COLORS: Record<string, string> = {
-  gemini: '#3b82f6',
+  gemini: '#6366f1',
   mistral: '#8b5cf6',
-  local: '#22c55e',
-  unknown: '#94a3b8',
+  local: '#10b981',
+  unknown: '#a1a1aa',
 }
 
 function colorForProvider(provider: string): string {
@@ -53,7 +53,7 @@ export function CostBarChart({ data }: Props) {
   return (
     <ResponsiveContainer width="100%" height={280}>
       <BarChart data={rows} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border, #e4e4e7)" />
         <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} />
         <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v.toFixed(3)}`} />
         <Tooltip

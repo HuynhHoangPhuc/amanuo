@@ -37,7 +37,7 @@ function ReviewQueuePage() {
       {isLoading ? (
         <PageSkeleton />
       ) : (
-        <div className="space-y-6 max-w-4xl">
+        <div className="space-y-4 max-w-4xl">
           {/* Pending review jobs */}
           <section>
             <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
@@ -46,7 +46,7 @@ function ReviewQueuePage() {
             {pendingJobs?.jobs.length === 0 ? (
               <p className="text-sm text-muted-foreground/70 py-4">No jobs awaiting review.</p>
             ) : (
-              <div className="rounded-xl border border-border bg-card divide-y divide-border">
+              <div className="rounded-md border border-border bg-card divide-y divide-border">
                 {pendingJobs?.jobs.map((job) => (
                   <Link
                     key={job.id}
@@ -78,7 +78,7 @@ function ReviewQueuePage() {
             {reviews?.reviews.length === 0 ? (
               <p className="text-sm text-muted-foreground/70 py-4">No reviews yet.</p>
             ) : (
-              <div className="rounded-xl border border-border bg-card divide-y divide-border">
+              <div className="rounded-md border border-border bg-card divide-y divide-border">
                 {reviews?.reviews.map((review) => (
                   <div
                     key={review.id}
@@ -89,7 +89,7 @@ function ReviewQueuePage() {
                         {review.job_id.slice(0, 8)}
                       </span>
                       <span
-                        className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        className={`text-xs px-2 py-0.5 rounded-md font-medium ${
                           review.status === 'approved'
                             ? 'bg-green-500/10 text-green-700'
                             : 'bg-primary/10 text-primary'

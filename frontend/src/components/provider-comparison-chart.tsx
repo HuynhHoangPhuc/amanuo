@@ -35,13 +35,13 @@ export function ProviderComparisonChart({ data }: Props) {
         data={chartData}
         margin={{ top: 4, right: 16, left: 24, bottom: 0 }}
       >
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border, #e4e4e7)" />
         <XAxis type="number" tick={{ fontSize: 11 }} />
         <YAxis type="category" dataKey="provider" tick={{ fontSize: 11 }} width={56} />
         <Tooltip contentStyle={{ fontSize: 12 }} />
         <Legend wrapperStyle={{ fontSize: 12 }} />
-        <Bar dataKey="Jobs" fill="#3b82f6" barSize={14} />
-        <Bar dataKey="Success %" fill="#22c55e" barSize={14} />
+        <Bar dataKey="Jobs" fill="#6366f1" barSize={14} />
+        <Bar dataKey="Success %" fill="#10b981" barSize={14} />
         <Bar dataKey="Cost ($)" fill="#f59e0b" barSize={14} />
       </BarChart>
     </ResponsiveContainer>

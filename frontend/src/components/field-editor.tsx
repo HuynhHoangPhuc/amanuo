@@ -47,7 +47,7 @@ export function FieldEditor({ fields, onChange, modifiedFields }: FieldEditorPro
               type="text"
               value={String(field.value ?? '')}
               onChange={(e) => handleChange(index, e.target.value)}
-              className={`w-full rounded-lg border px-3 py-2 text-sm ${
+              className={`w-full rounded-md border px-3 py-2 text-sm ${
                 isLowConfidence
                   ? 'border-yellow-300 bg-yellow-500/10 focus:ring-yellow-400'
                   : 'border-border bg-card focus:ring-ring'

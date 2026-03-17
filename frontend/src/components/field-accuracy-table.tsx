@@ -22,7 +22,7 @@ export function FieldAccuracyTable({ fieldAccuracy }: FieldAccuracyTableProps) {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
+    <div className="rounded-md border border-border bg-card overflow-hidden">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-muted">

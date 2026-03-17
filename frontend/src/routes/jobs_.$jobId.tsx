@@ -54,7 +54,7 @@ function JobDetailPage() {
             <Link
               to="/reviews/$jobId"
               params={{ jobId }}
-              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
               <ClipboardCheck size={14} /> Review
             </Link>
@@ -62,7 +62,7 @@ function JobDetailPage() {
           <button
             onClick={() => refetch()}
             disabled={isFetching}
-            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted disabled:opacity-50"
           >
             <RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />
             Refresh
@@ -74,7 +74,7 @@ function JobDetailPage() {
         <PageSkeleton />
       ) : job ? (
         <div className="space-y-4 max-w-3xl">
-          <div className="rounded-xl border border-border bg-card p-5">
+          <div className="rounded-md border border-border bg-card p-4">
             <h2 className="text-sm font-semibold text-foreground mb-3">Job Information</h2>
             <InfoRow label="Job ID" value={<span className="font-mono text-xs">{job.id}</span>} />
             <InfoRow label="Status" value={<StatusBadge status={job.status} />} />
@@ -96,14 +96,14 @@ function JobDetailPage() {
           </div>
 
           {reviewStatus && (
-            <div className="rounded-xl border border-border bg-card p-5">
+            <div className="rounded-md border border-border bg-card p-4">
               <h2 className="text-sm font-semibold text-foreground mb-3">Approval Progress</h2>
               <ApprovalProgress status={reviewStatus} />
             </div>
           )}
 
           {job.cost && (
-            <div className="rounded-xl border border-border bg-card p-5">
+            <div className="rounded-md border border-border bg-card p-4">
               <h2 className="text-sm font-semibold text-foreground mb-3">Cost</h2>
               <InfoRow label="Input tokens" value={job.cost.input_tokens.toLocaleString()} />
               <InfoRow label="Output tokens" value={job.cost.output_tokens.toLocaleString()} />

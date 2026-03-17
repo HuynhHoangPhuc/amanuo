@@ -380,19 +380,23 @@ def sign_payload(payload: dict, secret: str) -> str:
 
 ### shadcn/ui Integration
 - **Setup:** 10 pre-installed components (badge, button, card, input, select, sheet, skeleton, table, textarea, tooltip)
-- **Config:** `components.json` defines style (New York), baseColor (slate), and tsx output
+- **Config:** `components.json` defines style (New York), baseColor (zinc), and tsx output
 - **Usage:** Import from `@/components/ui/` alias (configured in tsconfig)
-- **Styling:** CVA (class-variance-authority) for component variants + clsx + tailwind-merge for class merging
-- **Refactored Components:** StatusBadge and RoleBadge now use shadcn Badge, LoadingSkeleton uses shadcn Skeleton
+- **Styling:** CVA (class-variance-authority) for component variants + clsx + tailwind-merge for class merging. All components use flat, compact styling (rounded-md borders, 13px text sizes, 36px table rows)
+- **Refactored Components:** StatusBadge and RoleBadge use shadcn Badge, LoadingSkeleton uses shadcn Skeleton
 - **ThemeToggle:** Icon-only button (Sun/Moon/Monitor from lucide-react) with dark/light/auto mode cycling
+- **Sidebar Navigation:** Collapsible left sidebar with grouped nav sections + keyboard hints (kbd tags for ⌘K, ⌘1, etc.)
+- **Command Palette:** CommandPalette component triggered by ⌘K (macOS) or Ctrl+K (Windows/Linux) for quick navigation and actions
 - **Mobile Sidebar:** Uses shadcn Sheet for responsive hamburger on <768px breakpoint
 
 ### Tailwind & Theme Token Conventions
 - **CSS Framework:** Tailwind CSS v4 with @tailwindcss/vite plugin
-- **Theme Tokens:** Use shadcn's oklch-based token system (--background, --foreground, --primary, --muted, --accent, --destructive, --border, --input, --ring)
+- **Theme Tokens:** Linear-inspired zinc + indigo palette with oklch-based token system (--background, --foreground, --primary, --muted, --accent, --destructive, --border, --input, --ring)
+- **Typography:** Inter (sans-serif) for UI, JetBrains Mono (monospace) for code/technical content
+- **Styling:** Flat, compact design (rounded-md, 13px text, 36px table rows) following Linear aesthetics
 - **Dark Mode:** Applied via `[class="dark"]` selector on `<html>` element
 - **Token Application:** Tailwind classes automatically use token values (e.g., `bg-background`, `text-muted-foreground`)
-- **Ocean Theme:** All 19 routes + 24 components fully support dark/light/auto modes with token system
+- **Navigation:** Collapsible sidebar with grouped sections + keyboard hints (kbd tags), command palette (⌘K)
 
 ### TanStack Router Setup
 ```typescript
@@ -408,38 +412,40 @@ export const Route = createFileRoute('/jobs/$jobId')({
 })
 ```
 
-### Theme Token System (Ocean Theme)
-The Ocean theme uses oklch-based CSS tokens for color consistency across all 19 routes + 24 components:
+### Theme Token System (Linear-Inspired Zinc + Indigo)
+The Linear-inspired design uses oklch-based CSS tokens with monochrome zinc + indigo accents for color consistency across all 19 routes + 24 components:
 
 ```css
 /* Global theme tokens in styles.css */
 :root {
-  --background: oklch(...);      /* Primary background */
-  --foreground: oklch(...);      /* Primary text */
-  --primary: oklch(...);         /* Primary brand color (ocean blue) */
+  --background: oklch(...);      /* Light background (zinc-50) */
+  --foreground: oklch(...);      /* Dark text (zinc-950) */
+  --primary: oklch(...);         /* Primary brand color (indigo-600) */
   --primary-foreground: oklch(...);
   --secondary: oklch(...);
   --secondary-foreground: oklch(...);
-  --muted: oklch(...);           /* Muted text/backgrounds */
+  --muted: oklch(...);           /* Muted text/backgrounds (zinc-500) */
   --muted-foreground: oklch(...);
-  --accent: oklch(...);          /* Accent color */
+  --accent: oklch(...);          /* Accent color (indigo-500) */
   --accent-foreground: oklch(...);
-  --destructive: oklch(...);     /* Error/delete actions */
+  --destructive: oklch(...);     /* Error/delete actions (red) */
   --destructive-foreground: oklch(...);
-  --border: oklch(...);
+  --border: oklch(...);          /* Subtle borders (zinc-200) */
   --input: oklch(...);
-  --ring: oklch(...);            /* Focus ring color */
+  --ring: oklch(...);            /* Focus ring color (indigo) */
 }
 
 /* Dark mode overrides */
 [class="dark"] {
-  --background: oklch(...);      /* Dark background */
-  --foreground: oklch(...);      /* Light text */
+  --background: oklch(...);      /* Dark background (zinc-950) */
+  --foreground: oklch(...);      /* Light text (zinc-50) */
+  --muted: oklch(...);           /* Muted text/backgrounds (zinc-700) */
+  --border: oklch(...);          /* Subtle borders (zinc-800) */
   /* ... other dark overrides */
 }
 ```
 
-**Usage:** Apply via Tailwind classes (e.g., `bg-background`, `text-muted-foreground`, `border-border`)
+**Usage:** Apply via Tailwind classes (e.g., `bg-background`, `text-muted-foreground`, `border-border`). Typography uses Inter (sans) for UI and JetBrains Mono for code blocks.
 
 ### API Client with Auth
 ```typescript
