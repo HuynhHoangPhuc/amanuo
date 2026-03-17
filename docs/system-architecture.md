@@ -15,10 +15,12 @@
 │                     FastAPI Backend + React Frontend                         │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  Frontend (React 19, TanStack Router/Query, Tailwind CSS v4)                │
+│  Frontend (React 19, TanStack Router/Query, Tailwind CSS v4, shadcn/ui)     │
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
 │  │  Pages: Dashboard │ Schemas │ Jobs │ Batches │ Pipelines │ Webhooks   │ │
-│  │  Components: Headers, Sidebars, Forms, Result Viewers, Modals        │ │
+│  │  UI Components: shadcn/ui (10 components) + custom domain components  │ │
+│  │  Theme: Ocean theme (oklch tokens), dark mode + light mode + auto      │ │
+│  │  Mobile: Responsive sidebar (Sheet on <768px)                         │ │
 │  │  API Client: X-API-Key auth, TanStack Query caching                  │ │
 │  └────────────────────────────────────────────────────────────────────────┘ │
 │                            ↓ HTTP/REST (port 3000→8000)                     │
@@ -185,11 +187,14 @@
 - **workspace.py** — Workspace ORM model, user association
 
 ### Frontend (`frontend/src/`)
-- **routes/**.tsx — Page components (file-based TanStack Router)
-- **components/** — Reusable UI components (Header, Sidebar, Forms, Modals)
+- **routes/**.tsx — Page components (file-based TanStack Router, 19 routes)
+- **components/ui/** — shadcn/ui base components (10 components: badge, button, card, input, select, sheet, skeleton, table, textarea, tooltip)
+- **components/** — Custom domain components (Header, Sidebar, StatusBadge, LoadingSkeleton, ThemeToggle, etc.)
+- **lib/utils.ts** — Tailwind utility helpers (cn function for merging Tailwind classes)
 - **lib/api-client.ts** — HTTP client with X-API-Key authentication
 - **lib/query-keys.ts** — TanStack Query key factories
 - **lib/types.ts** — TypeScript type definitions
+- **components.json** — shadcn/ui configuration (style: New York, baseColor: slate)
 
 ### UI (`src/ui/`)
 - **gradio-app.py** — Optional web interface for interactive extraction
@@ -817,7 +822,11 @@ CREATE TABLE review_audit_log (
 | **Framework** | React 19.0+ | UI library |
 | **Router** | TanStack Router | File-based, type-safe routing |
 | **State Mgmt** | TanStack Query | Async state, caching, refetching |
-| **Styling** | Tailwind CSS 4.0+ | Utility-first CSS framework |
+| **UI Library** | shadcn/ui (10 components) | Pre-built Radix-based components (New York style) |
+| **Component Primitives** | Radix UI + CVA | Accessible component foundation + class variance authority |
+| **Styling** | Tailwind CSS 4.0+ (oklch tokens) | Utility-first CSS framework with Ocean theme |
+| **Theme** | Ocean theme (oklch-based) | Dark/light/auto modes, all 19 routes + 24 components supported |
+| **Icons** | lucide-react | Sun/Moon/Monitor for theme toggle |
 | **Build Tool** | Vite 7.0+ | Fast dev server, optimized builds |
 | **Language** | TypeScript 5.0+ | Type safety |
 | **HTTP Client** | Fetch API + wrapper | X-API-Key authentication |

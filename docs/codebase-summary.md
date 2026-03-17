@@ -128,10 +128,10 @@ amanuo/
 │       ├── gradio-app.py            # Gradio web interface (optional)
 │       └── ui-helpers.py            # Form builders, utilities
 │
-├── frontend/                         # React 19 + TanStack (30 files, ~2,600 LOC)
+├── frontend/                         # React 19 + TanStack + shadcn/ui (32 files, ~2,800 LOC)
 │   ├── src/
-│   │   ├── routes/                  # TanStack file-based routing
-│   │   │   ├── __root.tsx                   # Root layout (header, sidebar)
+│   │   ├── routes/                  # TanStack file-based routing (19 routes)
+│   │   │   ├── __root.tsx                   # Root layout (header, sidebar, footer)
 │   │   │   ├── index.tsx                    # Dashboard
 │   │   │   ├── jobs.tsx                     # Job list
 │   │   │   ├── jobs_.$jobId.tsx             # Job detail
@@ -147,8 +147,19 @@ amanuo/
 │   │   │   ├── webhooks.tsx                 # Webhook config
 │   │   │   └── settings.tsx                 # User settings
 │   │   ├── components/
-│   │   │   ├── Header.tsx           # Top navigation
-│   │   │   ├── SidebarNav.tsx       # Left sidebar
+│   │   │   ├── ui/                  # shadcn/ui components (10 components)
+│   │   │   │   ├── badge.tsx        # Badge component (Radix Badge)
+│   │   │   │   ├── button.tsx       # Button component (CVA + Tailwind)
+│   │   │   │   ├── card.tsx         # Card container
+│   │   │   │   ├── input.tsx        # Input field
+│   │   │   │   ├── select.tsx       # Select dropdown (Radix Select)
+│   │   │   │   ├── sheet.tsx        # Sheet modal (Radix Dialog) for mobile sidebar
+│   │   │   │   ├── skeleton.tsx     # Loading skeleton state
+│   │   │   │   ├── table.tsx        # Table component
+│   │   │   │   ├── textarea.tsx     # Textarea field
+│   │   │   │   └── tooltip.tsx      # Tooltip (Radix Tooltip)
+│   │   │   ├── Header.tsx           # Top navigation (deleted static version)
+│   │   │   ├── SidebarNav.tsx       # Left sidebar with mobile hamburger (Sheet on <768px)
 │   │   │   ├── PageLayout.tsx       # Common layout wrapper
 │   │   │   ├── json-result-viewer.tsx # JSON display component
 │   │   │   ├── document-viewer.tsx  # PDF/image viewer for reviews
@@ -162,12 +173,14 @@ amanuo/
 │   │   │   ├── schema-suggest-form.tsx       # Upload + suggest UI
 │   │   │   ├── template-card.tsx    # Template marketplace card
 │   │   │   ├── suggested-fields-editor.tsx # Edit suggested fields
-│   │   │   ├── loading-skeleton.tsx # Loading state
-│   │   │   ├── status-badge.tsx     # Status indicator
+│   │   │   ├── loading-skeleton.tsx # Loading state (refactored to use shadcn Skeleton)
+│   │   │   ├── status-badge.tsx     # Status indicator (refactored to use shadcn Badge)
+│   │   │   ├── role-badge.tsx       # Role indicator (uses shadcn Badge)
 │   │   │   ├── toast-provider.tsx   # Toast notifications
-│   │   │   ├── ThemeToggle.tsx      # Light/dark mode
+│   │   │   ├── ThemeToggle.tsx      # Light/dark mode toggle (icon-only with Sun/Moon/Monitor)
 │   │   │   └── Footer.tsx           # Footer
 │   │   ├── lib/
+│   │   │   ├── utils.ts             # Tailwind utility helpers (cn, clsx merge)
 │   │   │   ├── api-client.ts        # HTTP client (X-API-Key auth)
 │   │   │   ├── websocket-client.ts  # WebSocket manager with auto-reconnect
 │   │   │   ├── query-keys.ts        # TanStack Query key factories
@@ -175,9 +188,10 @@ amanuo/
 │   │   ├── main.tsx                 # React entry point
 │   │   ├── router.tsx               # TanStack Router setup
 │   │   ├── routeTree.gen.ts         # Auto-generated route tree
-│   │   └── styles.css               # Global styles
+│   │   └── styles.css               # Global styles (Tailwind v4 with Ocean theme tokens)
+│   ├── components.json              # shadcn/ui config (style: New York, baseColor: slate, tsx: true)
 │   ├── public/                       # Static assets (favicon, logos)
-│   ├── package.json                 # npm dependencies (React 19, TanStack, Tailwind, Vite)
+│   ├── package.json                 # npm dependencies (React 19, TanStack, Tailwind v4, shadcn/ui, Vite)
 │   ├── tsconfig.json                # TypeScript config
 │   ├── vite.config.ts               # Vite config (DRY proxy using VITE_API_URL env var, host: true for containers)
 │   ├── Dockerfile                   # Multi-stage build (node:22-alpine → nginx:alpine)
@@ -624,9 +638,12 @@ For each step in config:
 | **Framework** | react 19.0+, react-dom |
 | **Router** | @tanstack/react-router |
 | **State** | @tanstack/react-query |
-| **Styling** | tailwindcss 4.0+, postcss |
+| **Styling** | tailwindcss 4.0+ (with @tailwindcss/vite), postcss |
 | **Build** | vite 7.0+, typescript 5.0+ |
-| **UI** | shadcn/ui (optional components) |
+| **UI Library** | shadcn/ui 10 components (badge, button, card, input, select, sheet, skeleton, table, textarea, tooltip) |
+| **Component Primitives** | radix-ui 1.4.3, class-variance-authority (CVA), clsx, tailwind-merge |
+| **Icons** | lucide-react 0.545.0 (for ThemeToggle: Sun, Moon, Monitor) |
+| **Charts** | recharts 2.15.0 |
 
 ## Configuration (Environment Variables)
 
@@ -672,7 +689,7 @@ EVENT_HEARTBEAT_INTERVAL=30
 | Metric | Value |
 |---|---|
 | **Backend Code** | ~8,200 LOC across 96 modules (src/) |
-| **Frontend Code** | ~2,800 LOC across 32 files (frontend/) |
+| **Frontend Code** | ~2,800 LOC across 32 files (frontend/, with shadcn/ui components) |
 | **Test Code** | ~6,000 LOC across 34 files (tests/) |
 | **Total LOC** | ~17,000 |
 | **Database Tables** | 20 (SQLAlchemy ORM + alembic) |

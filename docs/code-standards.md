@@ -369,13 +369,30 @@ def sign_payload(payload: dict, secret: str) -> str:
 # Retry backoff: [60s, 5m, 30m, 2h] (exponential)
 ```
 
-## Frontend Standards (TanStack React)
+## Frontend Standards (TanStack React + shadcn/ui)
 
 ### Component Naming
 - **Pages:** PascalCase, match route file name
-- **Components:** PascalCase (e.g., `JsonResultViewer`, `LoadingSkeleton`)
+- **shadcn/ui Components:** PascalCase in `src/components/ui/` (e.g., `Badge`, `Button`, `Card`)
+- **Custom Components:** PascalCase, domain-specific (e.g., `StatusBadge`, `LoadingSkeleton`)
 - **Hooks:** camelCase (e.g., `useJobStatus`, `useBatchProgress`)
 - **Utilities:** camelCase (e.g., `formatDate`, `parseResponse`)
+
+### shadcn/ui Integration
+- **Setup:** 10 pre-installed components (badge, button, card, input, select, sheet, skeleton, table, textarea, tooltip)
+- **Config:** `components.json` defines style (New York), baseColor (slate), and tsx output
+- **Usage:** Import from `@/components/ui/` alias (configured in tsconfig)
+- **Styling:** CVA (class-variance-authority) for component variants + clsx + tailwind-merge for class merging
+- **Refactored Components:** StatusBadge and RoleBadge now use shadcn Badge, LoadingSkeleton uses shadcn Skeleton
+- **ThemeToggle:** Icon-only button (Sun/Moon/Monitor from lucide-react) with dark/light/auto mode cycling
+- **Mobile Sidebar:** Uses shadcn Sheet for responsive hamburger on <768px breakpoint
+
+### Tailwind & Theme Token Conventions
+- **CSS Framework:** Tailwind CSS v4 with @tailwindcss/vite plugin
+- **Theme Tokens:** Use shadcn's oklch-based token system (--background, --foreground, --primary, --muted, --accent, --destructive, --border, --input, --ring)
+- **Dark Mode:** Applied via `[class="dark"]` selector on `<html>` element
+- **Token Application:** Tailwind classes automatically use token values (e.g., `bg-background`, `text-muted-foreground`)
+- **Ocean Theme:** All 19 routes + 24 components fully support dark/light/auto modes with token system
 
 ### TanStack Router Setup
 ```typescript
@@ -390,6 +407,39 @@ export const Route = createFileRoute('/jobs/$jobId')({
   component: JobDetailPage,
 })
 ```
+
+### Theme Token System (Ocean Theme)
+The Ocean theme uses oklch-based CSS tokens for color consistency across all 19 routes + 24 components:
+
+```css
+/* Global theme tokens in styles.css */
+:root {
+  --background: oklch(...);      /* Primary background */
+  --foreground: oklch(...);      /* Primary text */
+  --primary: oklch(...);         /* Primary brand color (ocean blue) */
+  --primary-foreground: oklch(...);
+  --secondary: oklch(...);
+  --secondary-foreground: oklch(...);
+  --muted: oklch(...);           /* Muted text/backgrounds */
+  --muted-foreground: oklch(...);
+  --accent: oklch(...);          /* Accent color */
+  --accent-foreground: oklch(...);
+  --destructive: oklch(...);     /* Error/delete actions */
+  --destructive-foreground: oklch(...);
+  --border: oklch(...);
+  --input: oklch(...);
+  --ring: oklch(...);            /* Focus ring color */
+}
+
+/* Dark mode overrides */
+[class="dark"] {
+  --background: oklch(...);      /* Dark background */
+  --foreground: oklch(...);      /* Light text */
+  /* ... other dark overrides */
+}
+```
+
+**Usage:** Apply via Tailwind classes (e.g., `bg-background`, `text-muted-foreground`, `border-border`)
 
 ### API Client with Auth
 ```typescript
