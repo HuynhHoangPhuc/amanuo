@@ -7,6 +7,18 @@ import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+// Use Docker service name when running inside container, localhost otherwise
+const apiTarget = process.env.VITE_API_URL || 'http://localhost:8000'
+
+const proxyRoutes = [
+  '/api', '/schemas', '/jobs', '/pipelines', '/batches',
+  '/webhooks', '/extract', '/auth', '/workspaces', '/api-keys', '/health',
+]
+
+const proxy = Object.fromEntries(
+  proxyRoutes.map((route) => [route, { target: apiTarget, changeOrigin: true }]),
+)
+
 const config = defineConfig({
   plugins: [
     devtools(),
@@ -17,19 +29,8 @@ const config = defineConfig({
   ],
   server: {
     port: 3000,
-    proxy: {
-      '/api': { target: 'http://localhost:8000', changeOrigin: true },
-      '/schemas': { target: 'http://localhost:8000', changeOrigin: true },
-      '/jobs': { target: 'http://localhost:8000', changeOrigin: true },
-      '/pipelines': { target: 'http://localhost:8000', changeOrigin: true },
-      '/batches': { target: 'http://localhost:8000', changeOrigin: true },
-      '/webhooks': { target: 'http://localhost:8000', changeOrigin: true },
-      '/extract': { target: 'http://localhost:8000', changeOrigin: true },
-      '/auth': { target: 'http://localhost:8000', changeOrigin: true },
-      '/workspaces': { target: 'http://localhost:8000', changeOrigin: true },
-      '/api-keys': { target: 'http://localhost:8000', changeOrigin: true },
-      '/health': { target: 'http://localhost:8000', changeOrigin: true },
-    },
+    host: true,
+    proxy,
   },
 })
 
