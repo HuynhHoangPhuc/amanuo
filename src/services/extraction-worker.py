@@ -216,12 +216,9 @@ async def _determine_final_status(row: dict, confidence: float, job_id: str | No
                     # Check for approval policy first
                     policy_id = getattr(schema_row, "approval_policy_id", None)
                     if policy_id and job_id:
-                        try:
-                            _engine = importlib.import_module("src.services.approval-engine")
-                            workspace_id = getattr(schema_row, "workspace_id", "default")
-                            await _engine.start_approval(job_id, policy_id, workspace_id)
-                        except Exception as e:
-                            logger.warning("Failed to start approval for job %s: %s", job_id, e)
+                        _engine = importlib.import_module("src.services.approval-engine")
+                        workspace_id = getattr(schema_row, "workspace_id", "default")
+                        await _engine.start_approval(job_id, policy_id, workspace_id)
                         return "pending_review"
                     # Legacy: require_review flag
                     if getattr(schema_row, "require_review", False):
