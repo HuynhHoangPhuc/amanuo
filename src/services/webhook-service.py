@@ -5,7 +5,7 @@ import json
 import logging
 import secrets
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,7 +47,7 @@ async def create_webhook(workspace_id: str, url: str, events: list[str]) -> Webh
     webhook_id = str(uuid.uuid4())
     raw_secret = secrets.token_urlsafe(32)
     events_json = json.dumps(events)
-    now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
 
     async with _get_session() as session:
         webhook = WebhookORM(
@@ -128,7 +128,7 @@ async def publish_event(workspace_id: str, event_type: str, data: dict) -> None:
 
     payload = {"event": event_type, "workspace_id": workspace_id, "data": data}
     payload_json = json.dumps(payload, separators=(",", ":"), sort_keys=True)
-    now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
 
     delivery_ids = []
     async with _get_session() as session:

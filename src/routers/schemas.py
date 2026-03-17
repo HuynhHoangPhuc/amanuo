@@ -41,6 +41,7 @@ async def list_schemas(workspace_id: str = Depends(_auth.get_workspace_id)):
             _api.SchemaResponse(
                 id=r.id, name=r.name,
                 fields=[SchemaField(**f) for f in json.loads(r.fields)],
+                approval_policy_id=getattr(r, "approval_policy_id", None),
                 created_at=r.created_at, updated_at=r.updated_at,
             )
             for r in rows
@@ -69,6 +70,7 @@ async def create_schema(
                 id=schema_id, name=req.name, fields=fields_json,
                 created_at=now, updated_at=now,
                 workspace_id=workspace_id, current_version="1.0.0",
+                approval_policy_id=req.approval_policy_id,
             )
             session.add(orm)
 
@@ -86,7 +88,8 @@ async def create_schema(
 
     return _api.SchemaResponse(
         id=schema_id, name=req.name, fields=schema.fields,
-        version="1.0.0", created_at=now, updated_at=now,
+        version="1.0.0", approval_policy_id=req.approval_policy_id,
+        created_at=now, updated_at=now,
     )
 
 
@@ -135,7 +138,9 @@ async def update_schema(
     return _api.SchemaResponse(
         id=schema_id, name=req.name,
         fields=[SchemaField(**f) for f in new_fields],
-        version=next_version, created_at=row.created_at, updated_at=now,
+        version=next_version,
+        approval_policy_id=getattr(row, "approval_policy_id", None),
+        created_at=row.created_at, updated_at=now,
     )
 
 

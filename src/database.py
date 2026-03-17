@@ -78,7 +78,7 @@ def get_session_factory() -> async_sessionmaker:
 
 # --- Schema migrations (raw SQL, kept for init_db compatibility) ---
 
-_SCHEMA_VERSION = 3
+_SCHEMA_VERSION = 4
 
 _MIGRATIONS = {
     1: [
@@ -260,6 +260,70 @@ _MIGRATIONS = {
         """,
         "ALTER TABLE schemas ADD COLUMN require_review INTEGER NOT NULL DEFAULT 0",
     ],
+    4: [
+        """
+        CREATE TABLE IF NOT EXISTS role_assignments (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES users(id),
+            workspace_id TEXT NOT NULL REFERENCES workspaces(id),
+            role TEXT NOT NULL CHECK(role IN ('viewer','member','reviewer','approver','admin')),
+            granted_by TEXT REFERENCES users(id),
+            created_at TEXT NOT NULL,
+            UNIQUE(user_id, workspace_id, role)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS approval_policies (
+            id TEXT PRIMARY KEY,
+            workspace_id TEXT NOT NULL REFERENCES workspaces(id),
+            name TEXT NOT NULL,
+            policy_type TEXT NOT NULL CHECK(policy_type IN ('chain','quorum')),
+            config TEXT NOT NULL,
+            deadline_hours INTEGER,
+            is_active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS review_rounds (
+            id TEXT PRIMARY KEY,
+            job_id TEXT NOT NULL REFERENCES jobs(id),
+            policy_id TEXT NOT NULL REFERENCES approval_policies(id),
+            round_number INTEGER NOT NULL,
+            round_type TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            required_approvals INTEGER NOT NULL DEFAULT 1,
+            deadline_at TEXT,
+            created_at TEXT NOT NULL,
+            completed_at TEXT
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS review_assignments (
+            id TEXT PRIMARY KEY,
+            round_id TEXT NOT NULL REFERENCES review_rounds(id),
+            user_id TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            corrected_result TEXT,
+            corrections TEXT,
+            review_time_ms INTEGER,
+            created_at TEXT NOT NULL,
+            completed_at TEXT
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS review_audit_log (
+            id TEXT PRIMARY KEY,
+            job_id TEXT NOT NULL REFERENCES jobs(id),
+            user_id TEXT,
+            action TEXT NOT NULL,
+            details TEXT,
+            created_at TEXT NOT NULL
+        )
+        """,
+        "ALTER TABLE schemas ADD COLUMN approval_policy_id TEXT REFERENCES approval_policies(id)",
+    ],
 }
 
 _SEED_DEFAULT_WORKSPACE = """
@@ -269,6 +333,12 @@ _SEED_DEFAULT_WORKSPACE = """
 
 _BACKFILL_JOBS = "UPDATE jobs SET workspace_id = 'default' WHERE workspace_id IS NULL"
 _BACKFILL_SCHEMAS = "UPDATE schemas SET workspace_id = 'default' WHERE workspace_id IS NULL"
+
+_SEED_ADMIN_ROLES = """
+    INSERT OR IGNORE INTO role_assignments (id, user_id, workspace_id, role, created_at)
+    SELECT 'seed-' || id, id, workspace_id, 'admin', datetime('now')
+    FROM users
+"""
 
 _INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_jobs_workspace ON jobs(workspace_id)",
@@ -287,6 +357,14 @@ _INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_reviews_status ON extraction_reviews(status)",
     "CREATE INDEX IF NOT EXISTS idx_accuracy_schema ON accuracy_metrics(schema_id)",
     "CREATE INDEX IF NOT EXISTS idx_accuracy_workspace ON accuracy_metrics(workspace_id)",
+    "CREATE INDEX IF NOT EXISTS idx_role_assignments_user ON role_assignments(user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_role_assignments_workspace ON role_assignments(workspace_id)",
+    "CREATE INDEX IF NOT EXISTS idx_approval_policies_workspace ON approval_policies(workspace_id)",
+    "CREATE INDEX IF NOT EXISTS idx_review_rounds_job ON review_rounds(job_id)",
+    "CREATE INDEX IF NOT EXISTS idx_review_rounds_status ON review_rounds(status)",
+    "CREATE INDEX IF NOT EXISTS idx_review_assignments_round ON review_assignments(round_id)",
+    "CREATE INDEX IF NOT EXISTS idx_review_assignments_user ON review_assignments(user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_review_audit_log_job ON review_audit_log(job_id)",
 ]
 
 
@@ -307,6 +385,11 @@ async def init_db_postgres() -> None:
     importlib.import_module("src.models.schema-template")
     importlib.import_module("src.models.extraction-review")
     importlib.import_module("src.models.accuracy-metric")
+    importlib.import_module("src.models.role-assignment")
+    importlib.import_module("src.models.approval-policy")
+    importlib.import_module("src.models.review-round")
+    importlib.import_module("src.models.review-assignment")
+    importlib.import_module("src.models.review-audit-log")
 
     async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -320,7 +403,7 @@ async def _seed_postgres_defaults() -> None:
     from src.models.workspace import WorkspaceORM, ApiKeyORM
 
     async with _async_session_factory() as session:
-        now = datetime.utcnow().isoformat()
+        now = datetime.now().isoformat()
 
         result = await session.execute(select(WorkspaceORM).where(WorkspaceORM.id == "default"))
         if not result.scalar_one_or_none():
@@ -399,6 +482,12 @@ async def init_db(db_path: str = _DB_PATH) -> None:
             await db.execute(_BACKFILL_JOBS)
             await db.execute(_BACKFILL_SCHEMAS)
             await _seed_default_api_key(db)
+
+        if current_version < 4:
+            try:
+                await db.execute(_SEED_ADMIN_ROLES)
+            except aiosqlite.OperationalError:
+                pass  # Table may not exist if users table is empty
 
         # Always ensure indexes exist (idempotent CREATE IF NOT EXISTS)
         for idx_sql in _INDEXES:

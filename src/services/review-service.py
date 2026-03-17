@@ -40,6 +40,16 @@ def compute_corrections(original: list[dict], corrected: list[dict]) -> list[dic
     return corrections
 
 
+async def _has_active_approval(job_id: str) -> bool:
+    """Check if job has an active approval workflow (policy-based)."""
+    try:
+        _engine = importlib.import_module("src.services.approval-engine")
+        status = await _engine.get_review_status(job_id)
+        return status is not None
+    except Exception:
+        return False
+
+
 async def submit_review(
     job_id: str,
     workspace_id: str,
@@ -48,7 +58,15 @@ async def submit_review(
     reviewer_id: str | None = None,
     review_time_ms: int | None = None,
 ) -> dict:
-    """Submit review: approve or correct extraction result."""
+    """Submit review: approve or correct extraction result.
+
+    For policy-based jobs, raises ValueError directing to approval workflow.
+    """
+    if await _has_active_approval(job_id):
+        raise ValueError(
+            f"Job {job_id} uses approval workflow. Use /jobs/{job_id}/review endpoint instead."
+        )
+
     async with _get_session() as session:
         # Check for existing review (prevent duplicates)
         existing = await session.execute(

@@ -488,7 +488,133 @@ def validate_schema(fields: list[dict]) -> None:
 - Use parameterized queries (prevent SQL injection)
 - All table operations via ORM (no raw SQL except migrations)
 
-See `/docs/advanced-patterns.md` for detailed SQLAlchemy, ARQ, WebSocket, review, accuracy, and template patterns.
+See `/docs/advanced-patterns.md` for detailed SQLAlchemy, ARQ, WebSocket, review, accuracy, template, RBAC, and approval engine patterns.
+
+## Role-Based Access Control (RBAC) Patterns
+
+### Role Definition
+```python
+# Roles (in workspace context):
+ROLES = ["viewer", "member", "reviewer", "approver", "admin"]
+
+# Role hierarchy:
+viewer < member < reviewer < approver < admin
+```
+
+### Middleware Integration
+```python
+# src/middleware/auth-middleware.py
+async def require_role(*allowed_roles: str):
+    """Decorator to gate endpoint by role."""
+    async def check_role(user: dict = Depends(get_current_user)):
+        if not any(role in user["roles"] for role in allowed_roles):
+            raise HTTPException(403, "Insufficient permissions")
+        return user
+    return check_role
+
+# Usage in routers:
+@router.post("/approve")
+async def approve_job(
+    user: dict = Depends(require_role("approver", "admin"))
+):
+    """Only approvers and admins can approve."""
+    pass
+```
+
+### Role Assignment Service
+```python
+# src/services/role-service.py
+async def assign_role(user_id: str, workspace_id: str, role: str, granted_by: str):
+    """Assign role to user in workspace (admin only)."""
+    # Validate role in ROLES
+    # Create role_assignment record
+    # Log via audit
+    pass
+
+async def remove_role(user_id: str, workspace_id: str, role: str):
+    """Remove role from user (prevent self-removal of admin)."""
+    # Prevent admin from removing own admin role
+    # Delete role_assignment
+    # Log via audit
+    pass
+```
+
+## Approval Engine Patterns
+
+### Policy Configuration
+```python
+# Chain policy example:
+{
+  "policy_type": "chain",
+  "config": {
+    "rounds": [
+      {"round_number": 1, "approvers": ["reviewer_1"]},
+      {"round_number": 2, "approvers": ["reviewer_2", "reviewer_3"]},
+      {"round_number": 3, "approvers": ["approver_1"]}
+    ],
+    "escalate_on_rejection": True
+  }
+}
+
+# Quorum policy example:
+{
+  "policy_type": "quorum",
+  "config": {
+    "m": 2,  # Approvals needed
+    "n": 3,  # Total reviewers
+    "approvers": ["reviewer_1", "reviewer_2", "reviewer_3"]
+  }
+}
+```
+
+### Approval Engine Service
+```python
+# src/services/approval-engine.py
+async def orchestrate_review_workflow(job_id: str, policy_id: str):
+    """Orchestrate multi-round approval workflow."""
+    policy = await get_policy(policy_id)
+
+    if policy.type == "chain":
+        # Sequential rounds: Each round must approve to move to next
+        for round_config in policy.config["rounds"]:
+            round_orm = await create_round(job_id, round_config)
+            await assign_reviewers(round_orm.id, round_config["approvers"])
+
+            # Wait for round decision
+            result = await wait_for_round_completion(round_orm.id)
+            if result == "rejected":
+                await escalate_to_approver(job_id)
+                return
+
+    elif policy.type == "quorum":
+        # Parallel voting: Tally votes, need M of N approvals
+        round_orm = await create_quorum_round(job_id, policy.config)
+        await assign_reviewers(round_orm.id, policy.config["approvers"])
+
+        decisions = await wait_for_quorum_completion(round_orm.id)
+        approvals = sum(1 for d in decisions if d == "approved")
+
+        if approvals >= policy.config["m"]:
+            await mark_job_approved(job_id)
+        else:
+            await escalate_to_approver(job_id)
+```
+
+### Review Workflow Endpoints
+```python
+# Reviewer workflow:
+GET /review-queue  # Get pending assignments
+POST /jobs/{id}/review  # Submit decision (approved/rejected/corrected)
+GET /jobs/{id}/review-status  # Check workflow progress
+
+# Admin workflow:
+GET /approval-policies  # List policies
+POST /approval-policies  # Create policy
+PUT /approval-policies/{id}  # Update policy
+DELETE /approval-policies/{id}  # Delete policy
+POST /jobs/{id}/assign-reviewers  # Auto-assign round reviewers
+GET /jobs/{id}/audit-log  # Approval audit trail
+```
 
 ## Pre-Commit Checklist
 

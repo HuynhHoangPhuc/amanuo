@@ -7,7 +7,7 @@ import importlib
 import json
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import httpx
 from sqlalchemy import select, update
@@ -116,7 +116,7 @@ async def deliver(delivery_id: str) -> bool:
                         status="delivered",
                         response_status=response.status_code,
                         response_body=response_body,
-                        delivered_at=datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+                        delivered_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
                     )
                 )
                 await session.commit()
@@ -146,7 +146,7 @@ async def _schedule_retry(
     """Update delivery record with retry schedule or mark permanently failed."""
     if attempt <= len(RETRY_BACKOFFS):
         delay = RETRY_BACKOFFS[attempt - 1]
-        next_retry = datetime.utcnow() + timedelta(seconds=delay)
+        next_retry = datetime.now(timezone.utc) + timedelta(seconds=delay)
         next_retry_str = next_retry.strftime("%Y-%m-%dT%H:%M:%S")
         await session.execute(
             update(WebhookDeliveryORM)
@@ -200,7 +200,7 @@ async def _retry_checker_loop() -> None:
                     .where(
                         WebhookDeliveryORM.status == "pending",
                         WebhookDeliveryORM.next_retry_at.isnot(None),
-                        WebhookDeliveryORM.next_retry_at <= datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+                        WebhookDeliveryORM.next_retry_at <= datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
                     )
                 )
                 rows = result.scalars().all()

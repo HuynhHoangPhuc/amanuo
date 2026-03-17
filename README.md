@@ -22,7 +22,9 @@ Amanuo extracts structured data from documents using user-defined schemas. It ro
 - Schema auto-suggest & template marketplace
 - WebSocket real-time job/batch updates
 - Advanced analytics dashboard (cost tracking, usage, provider comparison)
-- ~338 test functions across 30 test files, ~5s execution
+- RBAC with 5 roles (viewer/member/reviewer/approver/admin)
+- Multi-reviewer approval chains (sequential + quorum M-of-N voting)
+- ~384 test functions across 34 test files, ~13s execution
 
 ## Quick Start
 
@@ -68,7 +70,7 @@ docker-compose up
 # App auto-creates tables and seeds default workspace/API key on first start
 ```
 
-## API Endpoints (50+)
+## API Endpoints (65+)
 
 **Authentication & Authorization**
 
@@ -76,6 +78,10 @@ docker-compose up
 | GET | `/api-keys` | List API keys |
 | POST | `/api-keys` | Generate new API key (SHA256 hashed) |
 | DELETE | `/api-keys/{id}` | Revoke API key |
+| GET | `/users` | List workspace users with roles (admin) |
+| GET | `/users/me` | Current user profile + roles |
+| POST | `/users/{id}/roles` | Assign role to user (admin) |
+| DELETE | `/users/{id}/roles/{role}` | Remove role from user (admin) |
 
 **Workspaces & Extraction**
 
@@ -111,6 +117,19 @@ docker-compose up
 | GET | `/reviews/{job_id}` | Get review details |
 | GET | `/accuracy/{schema_id}` | Get accuracy metrics per schema |
 | POST | `/accuracy/{schema_id}/compute` | Compute accuracy metrics |
+
+**Approval Workflows**
+
+| GET | `/approval-policies` | List approval policies |
+| POST | `/approval-policies` | Create policy — chain or quorum (admin) |
+| GET | `/approval-policies/{id}` | Get policy detail |
+| PUT | `/approval-policies/{id}` | Update policy (admin) |
+| DELETE | `/approval-policies/{id}` | Soft-delete policy (admin) |
+| GET | `/review-queue` | My pending review assignments (reviewer+) |
+| GET | `/jobs/{id}/review-status` | Current round, assignments, conflicts |
+| POST | `/jobs/{id}/assign` | Assign reviewers to current round (admin) |
+| POST | `/jobs/{id}/review` | Submit review for assignment (reviewer+) |
+| GET | `/jobs/{id}/audit-log` | Review action history (admin) |
 
 **Pipelines & Webhooks**
 
@@ -189,7 +208,7 @@ src/
   ├── database.py       # SQLite/PostgreSQL schema + initialization
   └── main.py           # FastAPI app entry + lifespan
 frontend/               # TanStack React app (React 19, Tailwind CSS v4, Recharts)
-tests/                  # 338 unit & E2E tests (~5s)
+tests/                  # 384 unit & E2E tests (~13s)
 docs/                   # Architecture, code standards, API docs
 samples/                # Example schemas (invoice, ID card, license)
 ```
@@ -246,7 +265,7 @@ docker-compose up
 ## Running Tests
 
 ```bash
-# All tests (~338 test functions, ~5s total)
+# All tests (~384 test functions, ~13s total)
 uv run pytest
 
 # Unit tests only (fastest)
@@ -282,7 +301,7 @@ uv run pytest --cov=src --cov-report=html
 
 ## Roadmap
 
-**Completed Phases (1–7)**
+**Completed Phases (1–8)**
 - [x] Phase 1: Core OCR extraction + multi-workspace platform
 - [x] Phase 2: SQLAlchemy ORM migration + Redis/ARQ job queue
 - [x] Phase 3: WebSocket real-time events + template marketplace
@@ -290,12 +309,12 @@ uv run pytest --cov=src --cov-report=html
 - [x] Phase 5: Accuracy tracking + prompt hint generation
 - [x] Phase 6: Full TanStack React frontend + schema auto-suggest
 - [x] Phase 7: Advanced analytics — cost tracking, usage dashboards, provider comparison (PostgreSQL materialized views + Recharts)
+- [x] Phase 8: Multi-reviewer approval chains — RBAC, sequential chain + quorum workflows, conflict escalation, policy management UI
 
 **Future Work**
 - [ ] Fine-tuning pipeline for custom models
 - [ ] Document classification pre-processor
 - [ ] OAuth / social authentication
-- [ ] Multi-reviewer approval chains
 
 ## License
 

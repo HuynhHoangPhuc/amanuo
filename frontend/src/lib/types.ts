@@ -261,6 +261,97 @@ export interface AnalyticsOverview {
   period: string
 }
 
+// Approval workflow types
+export type PolicyType = 'chain' | 'quorum'
+export type RoundType = 'review' | 'approve' | 'escalation'
+export type RoundStatus = 'pending' | 'in_progress' | 'completed' | 'escalated'
+export type AssignmentStatus = 'pending' | 'in_progress' | 'approved' | 'corrected' | 'rejected'
+
+export interface ApprovalPolicy {
+  id: string
+  workspace_id: string
+  name: string
+  policy_type: PolicyType
+  config: Record<string, unknown>
+  deadline_hours?: number | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ReviewRound {
+  id: string
+  job_id: string
+  round_number: number
+  round_type: RoundType
+  status: RoundStatus
+  required_approvals: number
+  deadline_at?: string | null
+  created_at: string
+  completed_at?: string | null
+}
+
+export interface ReviewAssignment {
+  id: string
+  user_id: string
+  status: AssignmentStatus
+  completed_at?: string | null
+}
+
+export interface ReviewStatusResponse {
+  job_id: string
+  policy_name: string
+  policy_type: PolicyType
+  current_round: number
+  total_rounds?: number | null
+  round_status: RoundStatus
+  assignments: ReviewAssignment[]
+  deadline_at?: string | null
+}
+
+export interface ReviewQueueItem {
+  assignment_id: string
+  job_id: string
+  round_number: number
+  round_type: RoundType
+  deadline_at?: string | null
+  status: AssignmentStatus
+  schema_id?: string | null
+  created_at: string
+}
+
+export interface AuditLogEntry {
+  id: string
+  job_id: string
+  user_id?: string | null
+  action: string
+  details?: Record<string, unknown> | null
+  created_at: string
+}
+
+// RBAC types
+export type UserRole = 'viewer' | 'member' | 'reviewer' | 'approver' | 'admin'
+
+export interface RoleAssignment {
+  user_id: string
+  role: UserRole
+  status: 'assigned' | 'already_assigned'
+}
+
+export interface UserResponse {
+  id: string
+  email: string
+  display_name?: string | null
+  roles: UserRole[]
+  created_at: string
+}
+
+export interface CurrentUserResponse {
+  user_id: string
+  workspace_id: string
+  roles: UserRole[]
+}
+
 // Auth types
 export interface LoginRequest {
   email: string
@@ -275,4 +366,6 @@ export interface AuthResponse {
   access_token: string
   token_type: string
   user_id: string
+  workspace_id: string
+  roles: UserRole[]
 }

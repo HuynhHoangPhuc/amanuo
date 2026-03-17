@@ -3,7 +3,7 @@
 import importlib
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -92,7 +92,7 @@ async def test_webhook(
             "test": True,
             "webhook_id": webhook_id,
             "message": "This is a test delivery from Amanuo",
-            "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
         },
     )
     return {"queued": True, "webhook_id": webhook_id}

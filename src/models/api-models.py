@@ -44,6 +44,7 @@ class JobListResponse(BaseModel):
 class SchemaCreateRequest(BaseModel):
     name: str
     fields: list[SchemaField]
+    approval_policy_id: str | None = None
 
 
 class SchemaResponse(BaseModel):
@@ -51,6 +52,7 @@ class SchemaResponse(BaseModel):
     name: str
     fields: list[SchemaField]
     version: str = "1.0.0"
+    approval_policy_id: str | None = None
     created_at: str
     updated_at: str
 

@@ -48,6 +48,26 @@ export const queryKeys = {
     costs: (period: string) => ['analytics', 'costs', period] as const,
     providers: (period: string) => ['analytics', 'providers', period] as const,
   },
+  approvalPolicies: {
+    all: () => ['approval-policies'] as const,
+    list: () => ['approval-policies', 'list'] as const,
+    detail: (id: string) => ['approval-policies', 'detail', id] as const,
+  },
+  reviewQueue: {
+    all: () => ['review-queue'] as const,
+    list: () => ['review-queue', 'list'] as const,
+  },
+  reviewStatus: {
+    detail: (jobId: string) => ['review-status', jobId] as const,
+  },
+  auditLog: {
+    detail: (jobId: string) => ['audit-log', jobId] as const,
+  },
+  users: {
+    all: () => ['users'] as const,
+    list: () => ['users', 'list'] as const,
+    me: () => ['users', 'me'] as const,
+  },
   templates: {
     all: () => ['templates'] as const,
     list: (category?: string, lang?: string, search?: string) =>

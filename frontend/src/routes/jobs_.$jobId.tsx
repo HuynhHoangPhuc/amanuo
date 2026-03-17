@@ -4,10 +4,11 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '#/lib/api-client'
 import { queryKeys } from '#/lib/query-keys'
-import type { JobResponse } from '#/lib/types'
+import type { JobResponse, ReviewStatusResponse } from '#/lib/types'
 import { PageLayout } from '#/components/page-layout'
 import { StatusBadge } from '#/components/status-badge'
 import { JsonResultViewer } from '#/components/json-result-viewer'
+import { ApprovalProgress } from '#/components/approval-progress'
 import { PageSkeleton } from '#/components/loading-skeleton'
 import { ArrowLeft, RefreshCw, ClipboardCheck } from 'lucide-react'
 
@@ -32,6 +33,13 @@ function JobDetailPage() {
       q.state.data?.status === 'pending' || q.state.data?.status === 'processing'
         ? 2000
         : false,
+  })
+
+  const { data: reviewStatus } = useQuery({
+    queryKey: queryKeys.reviewStatus.detail(jobId),
+    queryFn: () => api.get<ReviewStatusResponse>(`/jobs/${jobId}/review-status`),
+    enabled: job?.status === 'pending_review',
+    retry: false,
   })
 
   return (
@@ -86,6 +94,13 @@ function JobDetailPage() {
               />
             )}
           </div>
+
+          {reviewStatus && (
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <h2 className="text-sm font-semibold text-gray-700 mb-3">Approval Progress</h2>
+              <ApprovalProgress status={reviewStatus} />
+            </div>
+          )}
 
           {job.cost && (
             <div className="rounded-xl border border-gray-200 bg-white p-5">

@@ -3,7 +3,7 @@
 import importlib
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -22,7 +22,7 @@ _to_dict = _svc._to_dict
 
 def _make_template(**kwargs) -> SchemaTemplate:
     """Create a minimal SchemaTemplate ORM row for testing."""
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     defaults = dict(
         id=str(uuid.uuid4()),
         name="Test Template",

@@ -124,12 +124,23 @@ async def update_key_last_used(key_id: str) -> None:
 # --- Session Auth (email/password + JWT) ---
 
 async def register_user(email: str, password: str, workspace_id: str = "default") -> dict:
-    """Register a new user with bcrypt-hashed password."""
+    """Register a new user with bcrypt-hashed password.
+
+    Auto-assigns 'admin' role if first user in workspace, else 'member'.
+    """
+    _role_service = importlib.import_module("src.services.role-service")
+
     user_id = str(uuid.uuid4())
     now = datetime.now().isoformat()
     password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt(rounds=12)).decode()
 
     async with _get_session() as session:
+        # Check if this is the first user in the workspace
+        existing_users = await session.execute(
+            select(UserORM).where(UserORM.workspace_id == workspace_id).limit(1)
+        )
+        is_first_user = existing_users.scalar_one_or_none() is None
+
         user = UserORM(
             id=user_id,
             email=email,
@@ -142,11 +153,17 @@ async def register_user(email: str, password: str, workspace_id: str = "default"
         session.add(user)
         await session.commit()
 
+    # Auto-assign role after user is committed
+    default_role = "admin" if is_first_user else "member"
+    await _role_service.assign_role(user_id, workspace_id, default_role)
+
     return {"id": user_id, "email": email, "workspace_id": workspace_id}
 
 
 async def login_user(email: str, password: str) -> dict | None:
-    """Verify credentials and return JWT tokens. Returns None on failure."""
+    """Verify credentials and return JWT tokens with roles. Returns None on failure."""
+    _role_service = importlib.import_module("src.services.role-service")
+
     async with _get_session() as session:
         result = await session.execute(
             select(UserORM).where(UserORM.email == email)
@@ -158,10 +175,14 @@ async def login_user(email: str, password: str) -> dict | None:
         if not bcrypt.checkpw(password.encode(), row.password_hash.encode()):
             return None
 
+        # Lookup user roles for JWT enrichment
+        roles = await _role_service.get_user_roles(row.id, row.workspace_id)
+
         now = datetime.now(timezone.utc)
         access_payload = {
             "sub": row.id,
             "workspace_id": row.workspace_id,
+            "roles": roles,
             "exp": now + timedelta(minutes=_ACCESS_TOKEN_MINUTES),
             "type": "access",
         }
@@ -180,13 +201,18 @@ async def login_user(email: str, password: str) -> dict | None:
             "token_type": "bearer",
             "user_id": row.id,
             "workspace_id": row.workspace_id,
+            "roles": roles,
         }
 
 
 def verify_token(token: str) -> dict | None:
-    """Decode and verify JWT token. Returns payload or None."""
+    """Decode and verify JWT token. Returns payload with roles or None."""
     try:
         payload = jwt.decode(token, _JWT_SECRET, algorithms=[_JWT_ALGORITHM])
-        return {"user_id": payload["sub"], "workspace_id": payload["workspace_id"]}
+        return {
+            "user_id": payload["sub"],
+            "workspace_id": payload["workspace_id"],
+            "roles": payload.get("roles", []),
+        }
     except jwt.PyJWTError:
         return None

@@ -128,6 +128,75 @@ async def db_workspace():
 
 
 @pytest.fixture
+async def db_with_users_and_roles():
+    """Create a workspace with admin + 3 reviewers + 1 approver, all with roles."""
+    import uuid
+    from datetime import datetime
+
+    import bcrypt
+
+    workspace_id = str(uuid.uuid4())
+    raw_key = secrets.token_urlsafe(32)
+    key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+    key_id = str(uuid.uuid4())
+    now = datetime.now().isoformat()
+    password_hash = bcrypt.hashpw(b"testpass123", bcrypt.gensalt(rounds=4)).decode()
+
+    admin_id = str(uuid.uuid4())
+    reviewer_ids = [str(uuid.uuid4()) for _ in range(3)]
+    approver_id = str(uuid.uuid4())
+
+    db = await get_connection(get_db_path(settings.database_url))
+    try:
+        await db.execute(
+            "INSERT INTO workspaces (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
+            (workspace_id, f"test-ws-{workspace_id[:8]}", now, now),
+        )
+        await db.execute(
+            """INSERT INTO api_keys (id, workspace_id, name, key_hash, key_prefix, created_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (key_id, workspace_id, "test-key", key_hash, raw_key[:8], now),
+        )
+
+        # Create users
+        users = [(admin_id, "admin@test.com", "admin")] + \
+                [(rid, f"reviewer{i}@test.com", "reviewer") for i, rid in enumerate(reviewer_ids)] + \
+                [(approver_id, "approver@test.com", "approver")]
+
+        for uid, email, _role in users:
+            await db.execute(
+                """INSERT INTO users (id, email, password_hash, workspace_id, is_active, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, 1, ?, ?)""",
+                (uid, email, password_hash, workspace_id, now, now),
+            )
+            await db.execute(
+                """INSERT INTO role_assignments (id, user_id, workspace_id, role, created_at)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (str(uuid.uuid4()), uid, workspace_id, _role, now),
+            )
+
+        # Give admin the admin role
+        await db.execute(
+            """INSERT OR IGNORE INTO role_assignments (id, user_id, workspace_id, role, created_at)
+               VALUES (?, ?, ?, 'member', ?)""",
+            (str(uuid.uuid4()), admin_id, workspace_id, now),
+        )
+
+        await db.commit()
+    finally:
+        await db.close()
+
+    return {
+        "workspace_id": workspace_id,
+        "api_key": raw_key,
+        "admin_id": admin_id,
+        "reviewer_ids": reviewer_ids,
+        "approver_id": approver_id,
+        "password": "testpass123",
+    }
+
+
+@pytest.fixture
 async def db_with_analytics_jobs():
     """Create a workspace with API key + 24 varied jobs for analytics testing."""
     import uuid

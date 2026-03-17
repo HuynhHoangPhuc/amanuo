@@ -129,9 +129,9 @@ async def test_is_postgresql_returns_false_for_sqlite():
 
 @pytest.mark.unit
 async def test_period_start_7d():
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timezone
     start = _analytics_svc._period_start("7d")
-    expected = (datetime.utcnow() - timedelta(days=7)).isoformat()
+    expected = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
     # Allow 1-second tolerance
     assert start[:16] == expected[:16]
 

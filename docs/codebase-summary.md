@@ -25,7 +25,12 @@ amanuo/
 │   │   ├── extraction-review.py     # ExtractionReview ORM model (HITL reviews)
 │   │   ├── accuracy-metric.py       # AccuracyMetric ORM model (dashboard)
 │   │   ├── schema-template.py       # SchemaTemplate ORM model (marketplace)
-│   │   └── analytics-models.py      # Pydantic models (DailyUsageStat, DailyCostStat, ProviderStat, AnalyticsOverview)
+│   │   ├── analytics-models.py      # Pydantic models (DailyUsageStat, DailyCostStat, ProviderStat, AnalyticsOverview)
+│   │   ├── role-assignment.py       # RoleAssignmentORM (RBAC role assignments)
+│   │   ├── approval-policy.py       # ApprovalPolicyORM (workflow policies)
+│   │   ├── review-round.py          # ReviewRoundORM (policy instances)
+│   │   ├── review-assignment.py     # ReviewAssignmentORM (per-reviewer tracking)
+│   │   └── review-audit-log.py      # ReviewAuditLogORM (approval audit trail)
 │   │
 │   ├── routers/
 │   │   ├── __init__.py
@@ -42,6 +47,9 @@ amanuo/
 │   │   ├── webhooks.py              # Register, test, delivery logs
 │   │   ├── websocket-events.py      # GET /ws/events (real-time event stream)
 │   │   ├── workspaces.py            # CRUD /workspaces
+│   │   ├── users.py                 # /users (RBAC management, GET, POST/DELETE roles)
+│   │   ├── approval-policies.py     # /approval-policies (CRUD, admin only)
+│   │   ├── review-workflow.py       # /review-queue, /jobs/{id}/review-*, approval workflows
 │   │   └── health.py                # GET /health
 │   │
 │   ├── services/
@@ -66,6 +74,10 @@ amanuo/
 │   │   ├── schema-suggest-service.py # VLM field suggestion for schema design
 │   │   ├── template-service.py      # Schema template CRUD + seeding
 │   │   ├── folder-watcher.py        # watchfiles batch aggregation (60s window)
+│   │   ├── role-service.py          # RBAC role assignment, removal, user listing
+│   │   ├── approval-policy-service.py # Approval policy CRUD, validation
+│   │   ├── approval-engine.py       # Workflow orchestration, conflict detection
+│   │   ├── review-assignment-service.py # Reviewer assignment, round tracking
 │   │   └── __init__.py
 │   │
 │   ├── engine/
@@ -170,7 +182,7 @@ amanuo/
 │   ├── vite.config.ts               # Vite build config (proxy to localhost:8000)
 │   └── index.html                   # HTML entry point
 │
-├── tests/                            # 338 tests (163 unit + 10 E2E analytics), 6.5s execution
+├── tests/                            # 384 tests (191 unit + 10 E2E analytics), ~7s execution
 │   ├── conftest.py                  # Shared fixtures (db_with_analytics_jobs fixture)
 │   ├── unit/
 │   │   ├── test-auth-middleware.py          # API key, JWT validation
@@ -331,6 +343,11 @@ amanuo/
 | `models/extraction-review.py` | ExtractionReview ORM for HITL review system |
 | `models/accuracy-metric.py` | AccuracyMetric ORM for tracking accuracy |
 | `models/schema-template.py` | SchemaTemplate ORM for template marketplace |
+| `models/role-assignment.py` | RoleAssignmentORM for RBAC role grants |
+| `models/approval-policy.py` | ApprovalPolicyORM for workflow policies |
+| `models/review-round.py` | ReviewRoundORM for policy instances |
+| `models/review-assignment.py` | ReviewAssignmentORM for per-reviewer tracking |
+| `models/review-audit-log.py` | ReviewAuditLogORM for approval audit trail |
 
 ### Frontend (React 19 + TanStack)
 
@@ -649,17 +666,17 @@ EVENT_HEARTBEAT_INTERVAL=30
 
 | Metric | Value |
 |---|---|
-| **Backend Code** | ~7,500 LOC across 86 modules (src/) |
-| **Frontend Code** | ~2,600 LOC across 28 files (frontend/) |
-| **Test Code** | ~5,500 LOC across 30 files (tests/) |
-| **Total LOC** | ~15,600 |
-| **Database Tables** | 15 (SQLAlchemy ORM + alembic) |
-| **API Endpoints** | 50+ (auth, extract, batch, reviews, accuracy, analytics, templates, webhooks, ws) |
-| **Services** | 23 modules (auth, workspace, job, batch, review, accuracy, analytics, template, etc.) |
-| **Routers** | 15 (auth, extract, batch, jobs, reviews, accuracy, analytics, pipelines, schemas, templates, webhooks, websocket-events, workspaces, health) |
-| **Test Files** | 30 (21 unit + 1 integration + 9 e2e) |
-| **Test Functions** | ~173 |
-| **Test Execution** | ~6.5 seconds |
+| **Backend Code** | ~8,200 LOC across 96 modules (src/) |
+| **Frontend Code** | ~2,800 LOC across 32 files (frontend/) |
+| **Test Code** | ~6,000 LOC across 34 files (tests/) |
+| **Total LOC** | ~17,000 |
+| **Database Tables** | 20 (SQLAlchemy ORM + alembic) |
+| **API Endpoints** | 55+ (auth, extract, batch, reviews, accuracy, analytics, users, approval-policies, review-workflow) |
+| **Services** | 27 modules (auth, workspace, job, batch, review, accuracy, analytics, template, role, approval-policy, approval-engine, review-assignment) |
+| **Routers** | 18 (auth, extract, batch, jobs, reviews, accuracy, analytics, pipelines, schemas, templates, webhooks, websocket-events, workspaces, users, approval-policies, review-workflow, health) |
+| **Test Files** | 34 (24 unit + 1 integration + 9 e2e) |
+| **Test Functions** | ~384 |
+| **Test Execution** | ~7 seconds |
 | **Classes** | ~85+ (ORM models, services, providers, pipeline steps) |
 | **Async Functions** | ~100+ |
 | **Test Coverage** | 100% (services), 95%+ (pipelines), 90%+ (review, accuracy, analytics) |

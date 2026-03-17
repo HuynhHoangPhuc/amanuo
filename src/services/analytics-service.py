@@ -6,7 +6,7 @@ PostgreSQL: queries pre-computed materialized views for speed.
 
 import importlib
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import text
 
@@ -29,7 +29,7 @@ def _period_start(period: str) -> str:
     """Convert period string (7d/30d/90d) to ISO start datetime."""
     days = {"7d": 7, "30d": 30, "90d": 90}
     delta = timedelta(days=days.get(period, 30))
-    return (datetime.utcnow() - delta).isoformat()
+    return (datetime.now(timezone.utc) - delta).isoformat()
 
 
 def _get_session():

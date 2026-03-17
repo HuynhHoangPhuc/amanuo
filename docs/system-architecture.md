@@ -15,7 +15,7 @@
 │  └────────────────────────────────────────────────────────────────────────┘ │
 │                            ↓ HTTP/REST (port 3000→8000)                     │
 │                                                                              │
-│  API Layer (45+ Endpoints)                                                  │
+│  API Layer (50+ Endpoints)                                                  │
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
 │  │  Auth: /auth/register /auth/login /auth/logout                        │ │
 │  │  Keys: /api-keys (CRUD, SHA256 hash)                                  │ │
@@ -27,6 +27,8 @@
 │  │  Accuracy: /accuracy/{schema_id} (metrics + compute)                 │ │
 │  │  Analytics: /analytics/usage /costs /providers /overview; POST /refresh │ │
 │  │  Templates: /templates /templates/{id}/import /schemas/suggest       │ │
+│  │  Users: /users, /users/me, /users/{id}/roles (RBAC management)       │ │
+│  │  Approval: /approval-policies/* (CRUD), /review-queue, /review-*     │ │
 │  │  WebSocket: /ws/events (Redis pub/sub, 30s heartbeat)                │ │
 │  │  Webhooks: /webhooks /webhooks/{id}/deliveries (retry backoff)       │ │
 │  │  Health: /health (liveness + provider availability)                   │ │
@@ -62,6 +64,10 @@
 │  │  Extraction Worker: ARQ job enqueue, provider delegation, scoring   │   │
 │  │  Folder Watcher: watchfiles-based batch aggregation (60s window)    │   │
 │  │  Confidence Scorer: Field-level aggregation                         │   │
+│  │  Role Service: RBAC role assignment/removal, user listing           │   │
+│  │  Approval Policy Service: Policy CRUD, validation                   │   │
+│  │  Approval Engine: Workflow orchestration, conflict detection        │   │
+│  │  Review Assignment Service: Auto-assign reviewers, track status     │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                  ↓                                           │
 │  Pipeline Engine Layer (Step-Based)                                          │
@@ -101,7 +107,7 @@
 ## Component Responsibilities
 
 ### Middleware (`src/middleware/`)
-- **auth-middleware.py** — API key (SHA256 hash) validation, JWT token verification, workspace scoping
+- **auth-middleware.py** — API key (SHA256 hash) validation, JWT token verification, workspace scoping, role-based access control (RBAC)
 
 ### API Layer (`src/routers/`)
 - **auth.py** — POST /auth/register, /login, /logout (JWT, refresh tokens)
@@ -113,6 +119,9 @@
 - **analytics.py** — GET /analytics/usage, /costs, /providers, /overview; POST /analytics/refresh
 - **webhooks.py** — Register webhooks, test delivery, view delivery logs
 - **workspaces.py** — Workspace CRUD, user isolation
+- **users.py** — User list, role assignment/removal, current user profile
+- **approval-policies.py** — Approval policy CRUD (GET, POST, PUT, DELETE) for admin
+- **review-workflow.py** — Review queue, job assignment, review submission, escalation, audit
 - **health.py** — Liveness check + provider availability
 
 ### Services Layer (`src/services/`)
@@ -128,6 +137,10 @@
 - **confidence-scorer.py** — Field-level confidence aggregation
 - **analytics-service.py** — Daily usage/cost/provider stats (SQLite queries + PG materialized view fallback)
 - **folder-watcher.py** — watchfiles-based batch aggregation (configurable window)
+- **role-service.py** — Role assignment/removal, user listing per workspace
+- **approval-policy-service.py** — Policy CRUD, config validation
+- **approval-engine.py** — Workflow orchestration, conflict detection, escalation
+- **review-assignment-service.py** — Auto-assign reviewers, track round status
 
 ### Pipeline Engine (`src/engine/`)
 - **pipeline-executor.py** — Sequential step execution, timing, error handling
@@ -355,7 +368,77 @@ Event format:
 - **Graceful Degradation**: Falls back to empty suggestion if VLM unavailable
 - **Frontend**: `schema-suggest-form.tsx`, `suggested-fields-editor.tsx`
 
-## Database Schema (15 Tables)
+## Role-Based Access Control (RBAC)
+
+### Role Hierarchy
+```
+Amanuo defines 5 roles per workspace:
+- viewer: Read-only access to schemas and completed jobs
+- member: Can submit extractions, view own results
+- reviewer: Can review jobs and submit corrections
+- approver: Can approve/reject review rounds, escalate conflicts
+- admin: Full access including policy management, role assignment
+```
+
+### Role Assignment
+- Stored in `role_assignments` table (user_id, workspace_id, role, granted_by, created_at)
+- Each user has 1-N roles per workspace
+- Role grants via admin endpoints: POST /users/{user_id}/roles
+- Role removal via admin endpoints: DELETE /users/{user_id}/roles/{role}
+- Cannot remove own admin role (lockout prevention)
+
+### Middleware Integration
+- Middleware enriches JWT token with roles from role_assignments table
+- `@require_role("admin")` decorator gates endpoints to specific roles
+- All endpoints check user["roles"] for authorization
+
+## Multi-Reviewer Approval Chains (Approval Engine)
+
+### Approval Flow
+```
+1. Job extracted and marked pending_review if schema requires_review=true
+2. Approval policy matched (e.g., "chain_3_levels" or "quorum_2of3")
+3. First review round created with assigned reviewers
+4. Reviewers submit decisions: approved, corrected, rejected
+5. Depending on policy:
+   - Chain: Move to next round on approval, escalate on rejection
+   - Quorum: Tally votes, escalate if no consensus (M votes vs N)
+6. On escalation: Route to approver_id for final decision
+7. Audit log tracks all decisions, conflicts, escalations
+8. Job marked reviewed on final approval
+```
+
+### Policy Types
+- **Sequential Chain** — N rounds with configurable approvers per round
+  - Example: "chain_3_levels" = 3 sequential review rounds
+  - If any round rejects: escalate to approver level
+  - If all approve: mark completed
+
+- **M-of-N Quorum** — Parallel voting by N reviewers, require M approvals
+  - Example: "quorum_2of3" = 3 reviewers, need 2 approvals to pass
+  - Voting window: configurable deadline_hours
+  - Tie-breaker: auto-escalate to approver on tie/rejection
+
+### Workflow Tables
+- **approval_policies** — Policy config (name, type, config JSON, deadline)
+- **review_rounds** — Round instance (job_id, round_number, type, deadline_at)
+- **review_assignments** — Assigned reviewers (user_id, round_id, status)
+- **review_audit_log** — Decision audit (assignment_id, action, result, timestamp)
+
+### API Endpoints
+- `GET /approval-policies` — List all policies in workspace
+- `POST /approval-policies` — Create policy (admin only)
+- `GET /approval-policies/{id}` — Get policy details
+- `PUT /approval-policies/{id}` — Update policy (admin only)
+- `DELETE /approval-policies/{id}` — Delete policy (admin only)
+
+- `GET /review-queue` — Get pending assignments for current user (reviewer/approver)
+- `GET /jobs/{id}/review-status` — Get job approval progress
+- `POST /jobs/{id}/assign-reviewers` — Auto-assign reviewers to review round
+- `POST /jobs/{id}/review` — Submit review decision (approved/rejected/corrected)
+- `GET /jobs/{id}/audit-log` — Get full approval audit trail
+
+## Database Schema (20 Tables)
 
 ### Authentication & Workspaces
 ```sql
@@ -558,6 +641,79 @@ CREATE TABLE accuracy_metrics (
   INDEX(workspace_id),
   INDEX(schema_id),
   INDEX(period_start)
+);
+
+-- RBAC & Approval (Phase 8)
+CREATE TABLE role_assignments (
+  id TEXT PRIMARY KEY,
+  user_id TEXT FOREIGN KEY,
+  workspace_id TEXT FOREIGN KEY,
+  role TEXT,  -- "viewer", "member", "reviewer", "approver", "admin"
+  granted_by TEXT FOREIGN KEY,  -- user_id who granted role
+  created_at TEXT,
+  INDEX(workspace_id),
+  INDEX(user_id),
+  INDEX(role)
+);
+
+-- Approval Policies
+CREATE TABLE approval_policies (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT FOREIGN KEY,
+  name TEXT NOT NULL,
+  policy_type TEXT,  -- "chain" | "quorum"
+  config TEXT,  -- JSON: {rounds: [{approvers: [id]}, ...]} or {m: 2, n: 3}
+  deadline_hours INTEGER,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TEXT,
+  INDEX(workspace_id),
+  INDEX(policy_type)
+);
+
+-- Review Rounds (instances of policy application)
+CREATE TABLE review_rounds (
+  id TEXT PRIMARY KEY,
+  job_id TEXT FOREIGN KEY,
+  policy_id TEXT FOREIGN KEY,
+  round_number INTEGER,  -- 1, 2, 3, ...
+  round_type TEXT,  -- "chain" | "quorum"
+  deadline_at TEXT,  -- ISO timestamp
+  status TEXT CHECK(status IN ('pending', 'in_progress', 'approved', 'rejected', 'escalated')),
+  created_at TEXT,
+  INDEX(job_id),
+  INDEX(policy_id),
+  INDEX(status)
+);
+
+-- Review Assignments (per-reviewer within round)
+CREATE TABLE review_assignments (
+  id TEXT PRIMARY KEY,
+  round_id TEXT FOREIGN KEY,
+  user_id TEXT FOREIGN KEY,
+  status TEXT CHECK(status IN ('pending', 'in_progress', 'approved', 'rejected', 'skipped')),
+  decision TEXT,  -- "approved" | "rejected" | "corrected"
+  corrected_result TEXT,  -- JSON if decision="corrected"
+  submitted_at TEXT,
+  created_at TEXT,
+  INDEX(round_id),
+  INDEX(user_id),
+  INDEX(status)
+);
+
+-- Approval Audit Log
+CREATE TABLE review_audit_log (
+  id TEXT PRIMARY KEY,
+  assignment_id TEXT FOREIGN KEY,
+  job_id TEXT FOREIGN KEY,
+  round_id TEXT FOREIGN KEY,
+  user_id TEXT FOREIGN KEY,
+  action TEXT,  -- "submitted", "escalated", "auto_approved"
+  result TEXT,  -- JSON: {decision, reason, conflicts}
+  metadata TEXT,  -- JSON: extra context
+  created_at TEXT,
+  INDEX(job_id),
+  INDEX(user_id),
+  INDEX(action)
 );
 ```
 

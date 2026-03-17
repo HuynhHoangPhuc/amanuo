@@ -49,6 +49,9 @@ _ws_events_router = importlib.import_module("src.routers.websocket-events")
 _reviews_router = importlib.import_module("src.routers.reviews")
 _accuracy_router = importlib.import_module("src.routers.accuracy")
 _analytics_router = importlib.import_module("src.routers.analytics")
+_users_router = importlib.import_module("src.routers.users")
+_approval_policies_router = importlib.import_module("src.routers.approval-policies")
+_review_workflow_router = importlib.import_module("src.routers.review-workflow")
 
 
 @asynccontextmanager
@@ -178,6 +181,9 @@ app.include_router(_ws_events_router.router)
 app.include_router(_reviews_router.router)
 app.include_router(_accuracy_router.router)
 app.include_router(_analytics_router.router)
+app.include_router(_users_router.router)
+app.include_router(_approval_policies_router.router)
+app.include_router(_review_workflow_router.router)
 
 try:
     import gradio as gr

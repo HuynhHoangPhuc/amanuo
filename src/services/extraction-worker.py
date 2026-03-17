@@ -85,7 +85,7 @@ async def process_job(job_id: str) -> None:
         result = await provider.extract(image, schema)
         conf = _confidence.score(result, schema)
 
-        final_status = await _determine_final_status(row, conf)
+        final_status = await _determine_final_status(row, conf, job_id=job_id)
         await _job_service.update_job(
             job_id,
             status=final_status,
@@ -155,7 +155,7 @@ async def _save_pipeline_result(job_id, context, schema, workspace_id):
             )
 
     row_data = {"schema_id": context.schema_id if hasattr(context, "schema_id") else None}
-    final_status = await _determine_final_status(row_data, confidence or 0.0)
+    final_status = await _determine_final_status(row_data, confidence or 0.0, job_id=job_id)
     await _job_service.update_job(
         job_id,
         status=final_status,
@@ -200,8 +200,8 @@ async def _update_batch(batch_id, job_status):
         pass
 
 
-async def _determine_final_status(row: dict, confidence: float) -> str:
-    """Decide if job needs human review based on schema setting or confidence."""
+async def _determine_final_status(row: dict, confidence: float, job_id: str | None = None) -> str:
+    """Decide if job needs human review based on schema setting, approval policy, or confidence."""
     from src.config import settings
     schema_id = row.get("schema_id")
     if schema_id:
@@ -212,8 +212,20 @@ async def _determine_final_status(row: dict, confidence: float) -> str:
                     select(_schema_orm.SchemaORM).where(_schema_orm.SchemaORM.id == schema_id)
                 )
                 schema_row = result.scalar_one_or_none()
-                if schema_row and getattr(schema_row, "require_review", False):
-                    return "pending_review"
+                if schema_row:
+                    # Check for approval policy first
+                    policy_id = getattr(schema_row, "approval_policy_id", None)
+                    if policy_id and job_id:
+                        try:
+                            _engine = importlib.import_module("src.services.approval-engine")
+                            workspace_id = getattr(schema_row, "workspace_id", "default")
+                            await _engine.start_approval(job_id, policy_id, workspace_id)
+                        except Exception as e:
+                            logger.warning("Failed to start approval for job %s: %s", job_id, e)
+                        return "pending_review"
+                    # Legacy: require_review flag
+                    if getattr(schema_row, "require_review", False):
+                        return "pending_review"
         except Exception:
             pass
     if confidence is not None and confidence < settings.review_confidence_threshold:

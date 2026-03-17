@@ -15,6 +15,7 @@ class SchemaORM(Base, TimestampMixin):
     workspace_id: Mapped[str | None] = mapped_column(String, nullable=True)
     current_version: Mapped[str] = mapped_column(String, nullable=False, default="1.0.0")
     require_review: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # boolean flag
+    approval_policy_id: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 class SchemaVersionORM(Base):

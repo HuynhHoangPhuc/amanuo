@@ -6,7 +6,7 @@ NOTE: Call `await seed_curated_templates(session)` from main.py lifespan after i
 import importlib
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -132,7 +132,7 @@ async def seed_curated_templates(session: AsyncSession) -> int:
         if existing.scalar_one_or_none():
             continue
 
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         languages = tmpl.get("languages", ["en"])
         fields = [
             {
