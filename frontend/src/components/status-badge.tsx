@@ -1,20 +1,22 @@
-/** Status badge for job/batch states with color coding. */
+/** Status badge for job/batch states — uses shadcn Badge with dark-safe colors. */
 
+import { Badge } from '#/components/ui/badge'
+import { cn } from '#/lib/utils'
 import type { BatchStatus, JobStatus } from '#/lib/types'
 
 type Status = JobStatus | BatchStatus | 'success' | 'failed' | 'pending' | 'partial' | 'active' | 'inactive'
 
 const STATUS_STYLES: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  processing: 'bg-blue-100 text-blue-800 border-blue-200',
-  completed: 'bg-green-100 text-green-800 border-green-200',
-  failed: 'bg-red-100 text-red-800 border-red-200',
-  pending_review: 'bg-purple-100 text-purple-800 border-purple-200',
-  reviewed: 'bg-teal-100 text-teal-800 border-teal-200',
-  partial: 'bg-orange-100 text-orange-800 border-orange-200',
-  success: 'bg-green-100 text-green-800 border-green-200',
-  active: 'bg-green-100 text-green-800 border-green-200',
-  inactive: 'bg-gray-100 text-gray-600 border-gray-200',
+  pending: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20 dark:text-yellow-400',
+  processing: 'bg-blue-500/10 text-blue-700 border-blue-500/20 dark:text-blue-400',
+  completed: 'bg-green-500/10 text-green-700 border-green-500/20 dark:text-green-400',
+  failed: 'bg-red-500/10 text-red-700 border-red-500/20 dark:text-red-400',
+  pending_review: 'bg-purple-500/10 text-purple-700 border-purple-500/20 dark:text-purple-400',
+  reviewed: 'bg-teal-500/10 text-teal-700 border-teal-500/20 dark:text-teal-400',
+  partial: 'bg-orange-500/10 text-orange-700 border-orange-500/20 dark:text-orange-400',
+  success: 'bg-green-500/10 text-green-700 border-green-500/20 dark:text-green-400',
+  active: 'bg-green-500/10 text-green-700 border-green-500/20 dark:text-green-400',
+  inactive: 'bg-muted text-muted-foreground border-border',
 }
 
 interface StatusBadgeProps {
@@ -22,13 +24,11 @@ interface StatusBadgeProps {
   className?: string
 }
 
-export function StatusBadge({ status, className = '' }: StatusBadgeProps) {
-  const styles = STATUS_STYLES[status] ?? 'bg-gray-100 text-gray-600 border-gray-200'
+export function StatusBadge({ status, className }: StatusBadgeProps) {
+  const styles = STATUS_STYLES[status] ?? 'bg-muted text-muted-foreground border-border'
   return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${styles} ${className}`}
-    >
+    <Badge variant="outline" className={cn('capitalize', styles, className)}>
       {status}
-    </span>
+    </Badge>
   )
 }

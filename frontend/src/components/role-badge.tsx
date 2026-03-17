@@ -1,13 +1,15 @@
-/** Role display badge with color coding per role. */
+/** Role display badge — uses shadcn Badge with dark-safe colors. */
 
+import { Badge } from '#/components/ui/badge'
+import { cn } from '#/lib/utils'
 import type { UserRole } from '#/lib/types'
 
 const ROLE_STYLES: Record<UserRole, string> = {
-  admin: 'bg-red-50 text-red-700 border-red-200',
-  approver: 'bg-orange-50 text-orange-700 border-orange-200',
-  reviewer: 'bg-blue-50 text-blue-700 border-blue-200',
-  member: 'bg-gray-50 text-gray-700 border-gray-200',
-  viewer: 'bg-slate-50 text-slate-600 border-slate-200',
+  admin: 'bg-red-500/10 text-red-700 border-red-500/20 dark:text-red-400',
+  approver: 'bg-orange-500/10 text-orange-700 border-orange-500/20 dark:text-orange-400',
+  reviewer: 'bg-blue-500/10 text-blue-700 border-blue-500/20 dark:text-blue-400',
+  member: 'bg-muted text-muted-foreground border-border',
+  viewer: 'bg-muted text-muted-foreground border-border',
 }
 
 interface RoleBadgeProps {
@@ -15,13 +17,11 @@ interface RoleBadgeProps {
   className?: string
 }
 
-export function RoleBadge({ role, className = '' }: RoleBadgeProps) {
-  const styles = ROLE_STYLES[role] ?? 'bg-gray-100 text-gray-600 border-gray-200'
+export function RoleBadge({ role, className }: RoleBadgeProps) {
+  const styles = ROLE_STYLES[role] ?? 'bg-muted text-muted-foreground border-border'
   return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${styles} ${className}`}
-    >
+    <Badge variant="outline" className={cn('capitalize', styles, className)}>
       {role}
-    </span>
+    </Badge>
   )
 }
