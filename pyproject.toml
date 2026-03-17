@@ -51,6 +51,10 @@ markers = [
 testpaths = ["tests"]
 asyncio_mode = "auto"
 python_files = ["test-*.py", "test_*.py"]
+filterwarnings = [
+    "ignore::ResourceWarning",
+    "ignore::pytest.PytestUnhandledThreadExceptionWarning",
+]
 
 [tool.ruff]
 line-length = 100

@@ -7,7 +7,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from src.config import settings
-from src.database import create_engine_from_url, get_connection, get_db_path, init_db
+from src.database import create_engine_from_url, get_connection, get_db_path, get_engine, init_db
 from src.main import app
 
 
@@ -40,6 +40,11 @@ async def _init_test_db(tmp_path):
     create_engine_from_url(test_url)
 
     yield
+
+    # Dispose SQLAlchemy engine to close all aiosqlite connections cleanly
+    engine = get_engine()
+    if engine:
+        await engine.dispose()
 
     settings.database_url = original_url
     settings.upload_dir = original_upload
