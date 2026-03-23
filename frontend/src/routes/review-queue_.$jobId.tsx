@@ -43,14 +43,14 @@ function ReviewJobPage() {
         <div className="max-w-4xl space-y-4">
           {/* Approval progress */}
           {status && (
-            <div className="rounded-md border border-border bg-card p-4">
+            <div className="rounded-lg border border-border bg-card p-4">
               <ApprovalProgress status={status} />
             </div>
           )}
 
           {/* Assignment list */}
           {status && (
-            <div className="rounded-md border border-border bg-card p-4">
+            <div className="rounded-lg border border-border bg-card p-4">
               <h3 className="text-sm font-semibold text-foreground mb-3">Assignments</h3>
               <div className="space-y-2">
                 {status.assignments.map((a) => (
@@ -76,7 +76,7 @@ function ReviewJobPage() {
               Review submitted as <strong className="capitalize">{reviewStatus}</strong>.
             </div>
           ) : (
-            <div className="rounded-md border border-border bg-card p-4">
+            <div className="rounded-lg border border-border bg-card p-4">
               <h3 className="text-sm font-semibold text-foreground mb-3">Submit Review</h3>
               <div className="flex gap-3">
                 <button

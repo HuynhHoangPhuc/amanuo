@@ -10,7 +10,7 @@ import { PolicyForm, type PolicyFormData } from '#/components/policy-form'
 import { PageSkeleton } from '#/components/loading-skeleton'
 import { StatusBadge } from '#/components/status-badge'
 import { useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Shield } from 'lucide-react'
 
 export const Route = createFileRoute('/admin/policies')({ component: AdminPoliciesPage })
 
@@ -39,16 +39,20 @@ function AdminPoliciesPage() {
   })
 
   return (
-    <PageLayout title="Approval Policies" actions={
-      <button onClick={() => setShowForm(true)}
-        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90">
-        <Plus size={14} /> New Policy
-      </button>
-    }>
+    <PageLayout
+      title="Approval Policies"
+      description="Configure review chain and quorum workflows"
+      actions={
+        <button onClick={() => setShowForm(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 cursor-pointer transition-colors">
+          <Plus size={14} /> New Policy
+        </button>
+      }
+    >
       {isLoading ? <PageSkeleton /> : (
         <div className="max-w-4xl space-y-4">
           {showForm && (
-            <div className="rounded-md border border-border bg-card p-4">
+            <div className="rounded-lg border border-border bg-card p-5">
               <h3 className="text-sm font-semibold text-foreground mb-3">Create Policy</h3>
               <PolicyForm
                 onSubmit={(data) => createMutation.mutate(data)}
@@ -56,33 +60,38 @@ function AdminPoliciesPage() {
                 isLoading={createMutation.isPending}
               />
               {createMutation.isError && (
-                <p className="text-xs text-red-600 mt-2">{(createMutation.error as Error).message}</p>
+                <p className="text-[12px] text-red-600 dark:text-red-400 mt-2">{(createMutation.error as Error).message}</p>
               )}
             </div>
           )}
 
           {policies && policies.length > 0 ? (
-            <div className="rounded-md border border-border bg-card divide-y divide-border">
+            <div className="rounded-lg border border-border bg-card divide-y divide-border/50">
               {policies.map((policy) => (
                 <div key={policy.id} className="flex items-center justify-between px-4 py-3">
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium text-foreground">{policy.name}</span>
                     <StatusBadge status={policy.policy_type === 'chain' ? 'processing' : 'pending_review'} />
-                    <span className="text-xs text-muted-foreground/70 capitalize">{policy.policy_type}</span>
+                    <span className="text-[12px] text-muted-foreground capitalize">{policy.policy_type}</span>
                     {policy.deadline_hours && (
-                      <span className="text-xs text-muted-foreground/70">{policy.deadline_hours}h deadline</span>
+                      <span className="text-[12px] text-muted-foreground tabular-nums">{policy.deadline_hours}h deadline</span>
                     )}
                   </div>
                   <button onClick={() => deleteMutation.mutate(policy.id)}
                     disabled={deleteMutation.isPending}
-                    className="text-muted-foreground/70 hover:text-red-600 transition-colors">
+                    className="text-muted-foreground hover:text-red-600 transition-colors cursor-pointer">
                     <Trash2 size={14} />
                   </button>
                 </div>
               ))}
             </div>
           ) : !showForm && (
-            <p className="text-sm text-muted-foreground/70 py-8 text-center">No approval policies yet.</p>
+            <div className="rounded-lg border border-border bg-card py-12 text-center text-muted-foreground">
+              <div className="flex flex-col items-center gap-2">
+                <Shield size={24} className="text-muted-foreground/40" />
+                <p className="text-[13px]">No approval policies yet.</p>
+              </div>
+            </div>
           )}
         </div>
       )}

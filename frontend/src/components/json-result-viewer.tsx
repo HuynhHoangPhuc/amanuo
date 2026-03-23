@@ -26,7 +26,7 @@ export function JsonResultViewer({ results }: JsonResultViewerProps) {
   const [expanded, setExpanded] = useState(true)
 
   return (
-    <div className="rounded-md border border-border bg-card overflow-hidden">
+    <div className="rounded-lg border border-border bg-card overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
         className="flex w-full items-center gap-2 px-4 py-3 text-sm font-medium text-foreground hover:bg-muted border-b border-border/50"

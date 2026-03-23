@@ -97,7 +97,7 @@ function BatchReviewPage() {
       {isLoading ? (
         <PageSkeleton />
       ) : (
-        <div className="overflow-x-auto rounded-md border border-border bg-card">
+        <div className="overflow-x-auto rounded-lg border border-border bg-card">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted">

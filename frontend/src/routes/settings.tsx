@@ -28,18 +28,18 @@ function ActiveKeyBanner() {
   }
 
   return (
-    <div className="rounded-md border border-primary/20 bg-primary/10 p-4 flex items-center gap-3 mb-4">
+    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 flex items-center gap-3 mb-5">
       <Key size={16} className="text-primary shrink-0" />
       <span className="text-sm text-primary font-mono flex-1 truncate">{masked}</span>
-      <button onClick={() => setVisible(!visible)} className="text-primary/70 hover:text-primary">
+      <button onClick={() => setVisible(!visible)} className="text-primary/70 hover:text-primary cursor-pointer transition-colors">
         {visible ? <EyeOff size={14} /> : <Eye size={14} />}
       </button>
-      <button onClick={copy} className="text-primary/70 hover:text-primary">
+      <button onClick={copy} className="text-primary/70 hover:text-primary cursor-pointer transition-colors">
         <Copy size={14} />
       </button>
       <button
         onClick={() => { clearApiKey(); window.location.reload() }}
-        className="text-xs text-red-500 hover:text-red-700 border border-red-500/20 rounded px-2 py-0.5"
+        className="text-[12px] text-red-500 hover:text-red-700 border border-red-500/20 rounded-md px-2 py-0.5 cursor-pointer transition-colors"
       >
         Clear
       </button>
@@ -51,24 +51,24 @@ function NewKeyResult({ apiKey, onDismiss }: { apiKey: string; onDismiss: () => 
   const { toast } = useToast()
   const copy = () => { navigator.clipboard.writeText(apiKey); toast('Copied!', 'success') }
   return (
-    <div className="rounded-md border border-green-500/20 bg-green-500/10 p-4 space-y-2 mb-4">
-      <p className="text-sm font-medium text-green-700 dark:text-green-400">API key created — copy it now, it won't be shown again.</p>
+    <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4 space-y-2 mb-5">
+      <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">API key created — copy it now, it won't be shown again.</p>
       <div className="flex items-center gap-2">
-        <code className="flex-1 text-xs bg-card border border-green-500/20 rounded px-3 py-2 font-mono break-all">
+        <code className="flex-1 text-[12px] bg-card border border-emerald-500/20 rounded-md px-3 py-2 font-mono break-all">
           {apiKey}
         </code>
-        <button onClick={copy} className="p-2 text-green-600 hover:text-green-700 dark:text-green-400">
+        <button onClick={copy} className="p-2 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 cursor-pointer transition-colors">
           <Copy size={14} />
         </button>
       </div>
       <div className="flex gap-2">
         <button
           onClick={() => { setApiKey(apiKey); toast('Active key updated', 'success'); onDismiss() }}
-          className="text-xs rounded-md bg-green-600 text-white px-3 py-1.5 hover:bg-green-700"
+          className="text-[12px] rounded-md bg-emerald-600 text-white px-3 py-1.5 hover:bg-emerald-700 cursor-pointer transition-colors"
         >
           Use this key
         </button>
-        <button onClick={onDismiss} className="text-xs text-muted-foreground hover:text-foreground">
+        <button onClick={onDismiss} className="text-[12px] text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
           Dismiss
         </button>
       </div>
@@ -113,19 +113,20 @@ function SettingsPage() {
   }
 
   return (
-    <PageLayout title="Settings">
-      <div className="max-w-2xl space-y-4">
+    <PageLayout title="Settings" description="API key management and configuration">
+      <div className="max-w-2xl space-y-5">
         <ActiveKeyBanner />
 
         {newKey && (
           <NewKeyResult apiKey={newKey} onDismiss={() => setNewKey(null)} />
         )}
 
-        <div className="rounded-md border border-border bg-card p-5">
+        {/* Create API key */}
+        <div className="rounded-lg border border-border bg-card p-5">
           <h2 className="text-sm font-semibold text-foreground mb-4">Create API Key</h2>
           <form onSubmit={handleCreate} className="flex gap-2">
             <input
-              className="flex-1 rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="flex-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder="Key name (e.g. production)"
               value={keyName}
               onChange={(e) => setKeyName(e.target.value)}
@@ -134,59 +135,65 @@ function SettingsPage() {
             <button
               type="submit"
               disabled={createMutation.isPending}
-              className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50 cursor-pointer transition-colors"
             >
               <Plus size={14} />
-              {createMutation.isPending ? 'Creating…' : 'Create'}
+              {createMutation.isPending ? 'Creating...' : 'Create'}
             </button>
           </form>
         </div>
 
-        <div className="rounded-md border border-border bg-card">
-          <div className="px-3 py-2 border-b border-border/50">
+        {/* API keys list */}
+        <div className="rounded-lg border border-border bg-card">
+          <div className="px-4 py-3 border-b border-border">
             <h2 className="text-sm font-semibold text-foreground">API Keys</h2>
           </div>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border/50 text-xs text-muted-foreground">
-                <th className="px-3 py-2 text-left font-medium">Name</th>
-                <th className="px-3 py-2 text-left font-medium">Prefix</th>
-                <th className="px-3 py-2 text-left font-medium">Last Used</th>
-                <th className="px-3 py-2 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/50">
-              {isLoading && Array.from({ length: 2 }).map((_, i) => (
-                <TableRowSkeleton key={i} cols={4} />
-              ))}
-              {!isLoading && apiKeys.map((k) => (
-                <tr key={k.id} className={`hover:bg-muted ${!k.active ? 'opacity-50' : ''}`}>
-                  <td className="px-3 py-2.5 font-medium text-foreground">{k.name}</td>
-                  <td className="px-3 py-2.5 font-mono text-xs text-muted-foreground">{k.key_prefix}…</td>
-                  <td className="px-3 py-2.5 text-xs text-muted-foreground">
-                    {k.last_used_at ? new Date(k.last_used_at).toLocaleString() : 'Never'}
-                  </td>
-                  <td className="px-3 py-2.5 text-right">
-                    <button
-                      onClick={() => revokeMutation.mutate(k.id)}
-                      disabled={!k.active}
-                      className="text-red-400 hover:text-red-600 p-1 disabled:opacity-30"
-                      title="Revoke key"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-[13px]">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Name</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Prefix</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Last Used</th>
+                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>
                 </tr>
-              ))}
-              {!isLoading && apiKeys.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground/70">
-                    No API keys yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {isLoading && Array.from({ length: 2 }).map((_, i) => (
+                  <TableRowSkeleton key={i} cols={4} />
+                ))}
+                {!isLoading && apiKeys.map((k) => (
+                  <tr key={k.id} className={`border-b border-border/50 hover:bg-accent/50 transition-colors ${!k.active ? 'opacity-50' : ''}`}>
+                    <td className="px-4 py-2.5 font-medium text-foreground">{k.name}</td>
+                    <td className="px-4 py-2.5 font-mono text-[12px] text-muted-foreground">{k.key_prefix}...</td>
+                    <td className="px-4 py-2.5 text-[12px] text-muted-foreground tabular-nums">
+                      {k.last_used_at ? new Date(k.last_used_at).toLocaleString() : 'Never'}
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <button
+                        onClick={() => revokeMutation.mutate(k.id)}
+                        disabled={!k.active}
+                        className="text-red-400 hover:text-red-600 p-1 disabled:opacity-30 cursor-pointer transition-colors"
+                        title="Revoke key"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {!isLoading && apiKeys.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">
+                      <div className="flex flex-col items-center gap-2">
+                        <Key size={24} className="text-muted-foreground/40" />
+                        <p className="text-[13px]">No API keys yet.</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </PageLayout>

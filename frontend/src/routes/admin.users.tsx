@@ -9,7 +9,7 @@ import { PageLayout } from '#/components/page-layout'
 import { RoleBadge } from '#/components/role-badge'
 import { PageSkeleton } from '#/components/loading-skeleton'
 import { useState } from 'react'
-import { Plus, X } from 'lucide-react'
+import { Plus, X, Users } from 'lucide-react'
 
 export const Route = createFileRoute('/admin/users')({ component: AdminUsersPage })
 
@@ -42,21 +42,21 @@ function AdminUsersPage() {
   })
 
   return (
-    <PageLayout title="User Management">
+    <PageLayout title="Users" description="Manage user roles and permissions">
       {isLoading ? <PageSkeleton /> : (
         <div className="max-w-4xl">
           {users && users.length > 0 ? (
-            <div className="rounded-md border border-border bg-card divide-y divide-border">
+            <div className="rounded-lg border border-border bg-card divide-y divide-border/50">
               {users.map((user) => (
                 <div key={user.id} className="px-4 py-3">
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <span className="text-sm font-medium text-foreground">{user.email}</span>
                       {user.display_name && (
-                        <span className="text-xs text-muted-foreground/70 ml-2">{user.display_name}</span>
+                        <span className="text-[12px] text-muted-foreground ml-2">{user.display_name}</span>
                       )}
                     </div>
-                    <span className="text-xs text-muted-foreground/70">{new Date(user.created_at).toLocaleDateString()}</span>
+                    <span className="text-[12px] text-muted-foreground tabular-nums">{new Date(user.created_at).toLocaleDateString()}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     {user.roles.map((role) => (
@@ -65,14 +65,13 @@ function AdminUsersPage() {
                         <button
                           onClick={() => removeMutation.mutate({ userId: user.id, role })}
                           disabled={removeMutation.isPending}
-                          className="text-muted-foreground/50 hover:text-red-500 transition-colors"
+                          className="text-muted-foreground/50 hover:text-red-500 transition-colors cursor-pointer"
                           title={`Remove ${role} role`}
                         >
                           <X size={12} />
                         </button>
                       </div>
                     ))}
-                    {/* Add role dropdown */}
                     {addingRole?.userId === user.id ? (
                       <select
                         value=""
@@ -81,7 +80,7 @@ function AdminUsersPage() {
                             assignMutation.mutate({ userId: user.id, role: e.target.value })
                           }
                         }}
-                        className="text-xs border border-border rounded px-1 py-0.5"
+                        className="text-[12px] border border-input bg-transparent rounded-md px-2 py-0.5 cursor-pointer"
                         autoFocus
                         onBlur={() => setAddingRole(null)}
                       >
@@ -93,7 +92,7 @@ function AdminUsersPage() {
                     ) : (
                       <button
                         onClick={() => setAddingRole({ userId: user.id, role: 'member' })}
-                        className="text-muted-foreground/50 hover:text-primary transition-colors"
+                        className="text-muted-foreground/50 hover:text-primary transition-colors cursor-pointer"
                         title="Add role"
                       >
                         <Plus size={14} />
@@ -104,7 +103,12 @@ function AdminUsersPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground/70 py-8 text-center">No users found.</p>
+            <div className="rounded-lg border border-border bg-card py-12 text-center text-muted-foreground">
+              <div className="flex flex-col items-center gap-2">
+                <Users size={24} className="text-muted-foreground/40" />
+                <p className="text-[13px]">No users found.</p>
+              </div>
+            </div>
           )}
         </div>
       )}

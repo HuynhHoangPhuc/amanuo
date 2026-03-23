@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { TrendingUp } from 'lucide-react'
 import { api } from '#/lib/api-client'
 import { queryKeys } from '#/lib/query-keys'
 import type { AnalyticsOverview, DailyCostStat, DailyUsageStat, ProviderStat } from '#/lib/types'
@@ -12,6 +11,7 @@ import { PageSkeleton } from '#/components/loading-skeleton'
 import { UsageAreaChart } from '#/components/usage-area-chart'
 import { CostBarChart } from '#/components/cost-bar-chart'
 import { ProviderComparisonChart } from '#/components/provider-comparison-chart'
+import { Briefcase, DollarSign, Target, FileText } from 'lucide-react'
 
 export const Route = createFileRoute('/analytics')({ component: AnalyticsDashboardPage })
 
@@ -49,59 +49,58 @@ function AnalyticsDashboardPage() {
   return (
     <PageLayout
       title="Analytics"
+      description="Usage metrics, cost tracking, and provider comparison"
       actions={
-        <div className="flex items-center gap-2">
-          <TrendingUp size={16} className="text-muted-foreground/70" />
-          <div className="flex rounded-md border border-border overflow-hidden">
-            {(['7d', '30d', '90d'] as Period[]).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                  period === p
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-card text-muted-foreground hover:bg-muted'
-                }`}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
+        <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
+          {(['7d', '30d', '90d'] as Period[]).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors cursor-pointer ${
+                period === p
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {p}
+            </button>
+          ))}
         </div>
       }
     >
       {isLoading ? (
         <PageSkeleton />
       ) : (
-        <div className="space-y-4 max-w-5xl">
+        <div className="space-y-5 max-w-5xl">
           {/* Overview stat cards */}
           {overview && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <StatCard label="Total Jobs" value={overview.total_jobs} />
-              <StatCard label="Total Cost" value={`$${overview.total_cost_usd.toFixed(4)}`} color="blue" />
-              <StatCard
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <AnalyticsStatCard label="Total Jobs" value={overview.total_jobs} icon={Briefcase} color="primary" />
+              <AnalyticsStatCard label="Total Cost" value={`$${overview.total_cost_usd.toFixed(4)}`} icon={DollarSign} color="blue" />
+              <AnalyticsStatCard
                 label="Avg Confidence"
-                value={overview.avg_confidence != null ? `${(overview.avg_confidence * 100).toFixed(1)}%` : '—'}
+                value={overview.avg_confidence != null ? `${(overview.avg_confidence * 100).toFixed(1)}%` : '\u2014'}
+                icon={Target}
                 color="green"
               />
-              <StatCard label="Active Schemas" value={overview.active_schemas} color="purple" />
+              <AnalyticsStatCard label="Active Schemas" value={overview.active_schemas} icon={FileText} color="purple" />
             </div>
           )}
 
           {/* Usage over time */}
-          <section className="rounded-md border border-border bg-card p-4">
+          <section className="rounded-lg border border-border bg-card p-5">
             <h2 className="text-sm font-semibold text-foreground mb-4">Usage Over Time</h2>
             <UsageAreaChart data={usage} />
           </section>
 
           {/* Cost breakdown */}
-          <section className="rounded-md border border-border bg-card p-4">
+          <section className="rounded-lg border border-border bg-card p-5">
             <h2 className="text-sm font-semibold text-foreground mb-4">Cost Breakdown by Provider</h2>
             <CostBarChart data={costs} />
           </section>
 
           {/* Provider comparison */}
-          <section className="rounded-md border border-border bg-card p-4">
+          <section className="rounded-lg border border-border bg-card p-5">
             <h2 className="text-sm font-semibold text-foreground mb-4">Provider Comparison</h2>
             <ProviderComparisonChart data={providers} />
           </section>
@@ -111,25 +110,32 @@ function AnalyticsDashboardPage() {
   )
 }
 
-function StatCard({
+function AnalyticsStatCard({
   label,
   value,
-  color = 'gray',
+  icon: Icon,
+  color,
 }: {
   label: string
   value: string | number
-  color?: 'gray' | 'blue' | 'green' | 'purple'
+  icon: React.ElementType
+  color: 'primary' | 'blue' | 'green' | 'purple'
 }) {
   const colorMap = {
-    gray: 'bg-muted text-foreground',
-    blue: 'bg-primary/10 text-primary',
-    green: 'bg-green-500/10 text-green-700',
-    purple: 'bg-purple-500/10 text-purple-700',
+    primary: 'bg-primary/10 text-primary',
+    blue: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+    green: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+    purple: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
   }
   return (
-    <div className={`rounded-md border border-border p-4 ${colorMap[color]}`}>
-      <p className="text-xs font-medium opacity-70">{label}</p>
-      <p className="text-xl font-semibold mt-1">{value}</p>
+    <div className="rounded-lg border border-border bg-card p-4 flex items-start justify-between">
+      <div>
+        <p className="text-[12px] font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
+        <p className="text-2xl font-semibold text-foreground mt-1 tabular-nums">{value}</p>
+      </div>
+      <div className={`rounded-lg p-2.5 ${colorMap[color]}`}>
+        <Icon size={18} strokeWidth={1.75} />
+      </div>
     </div>
   )
 }

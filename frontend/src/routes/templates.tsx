@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search } from 'lucide-react'
+import { Search, LayoutGrid } from 'lucide-react'
 import { api } from '#/lib/api-client'
 import { queryKeys } from '#/lib/query-keys'
 import { PageLayout } from '#/components/page-layout'
@@ -52,29 +52,32 @@ function TemplatesPage() {
   const templates = data?.templates ?? []
 
   return (
-    <PageLayout title="Template Marketplace">
-      {/* Category filter tabs */}
-      <div className="flex items-center gap-1 mb-4 flex-wrap">
-        {CATEGORIES.map((c) => (
-          <button
-            key={c}
-            onClick={() => setCategory(c)}
-            className={`rounded-md px-3 py-1.5 text-sm capitalize transition-colors ${
-              category === c
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-card border border-border text-muted-foreground hover:bg-muted'
-            }`}
-          >
-            {c}
-          </button>
-        ))}
+    <PageLayout title="Templates" description="Browse and import curated schema templates">
+      {/* Filter bar */}
+      <div className="flex items-center gap-3 mb-5 flex-wrap">
+        {/* Category tabs */}
+        <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
+          {CATEGORIES.map((c) => (
+            <button
+              key={c}
+              onClick={() => setCategory(c)}
+              className={`rounded-md px-3 py-1.5 text-[12px] font-medium capitalize transition-colors cursor-pointer ${
+                category === c
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
 
         {/* Search */}
-        <div className="ml-auto flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5">
-          <Search size={14} className="text-muted-foreground/70" />
+        <div className="ml-auto flex items-center gap-2 rounded-md border border-input bg-transparent px-3 py-1.5">
+          <Search size={14} className="text-muted-foreground" />
           <input
-            className="text-sm focus:outline-none w-40 placeholder:text-muted-foreground"
-            placeholder="Search templates…"
+            className="text-sm bg-transparent focus:outline-none w-40 placeholder:text-muted-foreground"
+            placeholder="Search templates..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -85,12 +88,15 @@ function TemplatesPage() {
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="rounded-md border border-border/50 bg-card h-36 animate-pulse" />
+            <div key={i} className="rounded-lg border border-border bg-card h-36 animate-pulse" />
           ))}
         </div>
       ) : templates.length === 0 ? (
-        <div className="rounded-md border border-border bg-card py-16 text-center text-muted-foreground/70 text-sm">
-          No templates found.
+        <div className="rounded-lg border border-border bg-card py-16 text-center text-muted-foreground">
+          <div className="flex flex-col items-center gap-2">
+            <LayoutGrid size={24} className="text-muted-foreground/40" />
+            <p className="text-[13px]">No templates found.</p>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

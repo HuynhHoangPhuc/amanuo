@@ -10,7 +10,7 @@ import { PageLayout } from '#/components/page-layout'
 import { StatusBadge } from '#/components/status-badge'
 import { TableRowSkeleton } from '#/components/loading-skeleton'
 import { useToast } from '#/components/toast-provider'
-import { Plus, Trash2, Send, ChevronDown, ChevronRight } from 'lucide-react'
+import { Plus, Trash2, Send, ChevronDown, ChevronRight, Webhook } from 'lucide-react'
 
 export const Route = createFileRoute('/webhooks')({ component: WebhooksPage })
 
@@ -41,22 +41,22 @@ function CreateWebhookForm({ onClose }: { onClose: () => void }) {
     )
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <form
         onSubmit={(e) => { e.preventDefault(); mutation.mutate({ url, events }) }}
-        className="w-full max-w-md rounded-md bg-card shadow-xl p-6 space-y-4"
+        className="w-full max-w-md rounded-lg border border-border bg-card shadow-lg p-6 space-y-4"
       >
         <h2 className="text-base font-semibold text-foreground">New Webhook</h2>
         <input
           type="url"
-          className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           placeholder="https://your-server.com/webhook"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           required
         />
         <div>
-          <p className="text-xs font-medium text-muted-foreground mb-2">Events</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Events</p>
           <div className="space-y-1.5">
             {ALL_EVENTS.map((ev) => (
               <label key={ev} className="flex items-center gap-2 cursor-pointer">
@@ -72,15 +72,15 @@ function CreateWebhookForm({ onClose }: { onClose: () => void }) {
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-accent cursor-pointer transition-colors">
             Cancel
           </button>
           <button
             type="submit"
             disabled={mutation.isPending || events.length === 0}
-            className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 cursor-pointer transition-colors"
           >
-            {mutation.isPending ? 'Creating…' : 'Create'}
+            {mutation.isPending ? 'Creating...' : 'Create'}
           </button>
         </div>
       </form>
@@ -95,20 +95,20 @@ function DeliveryLog({ webhookId }: { webhookId: string }) {
   })
 
   return (
-    <div className="px-3 pb-2">
-      <p className="text-xs font-medium text-muted-foreground mb-2">Recent Deliveries</p>
+    <div className="px-4 pb-3">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Recent Deliveries</p>
       {isLoading && <TableRowSkeleton cols={3} />}
       {!isLoading && deliveries.length === 0 && (
-        <p className="text-xs text-muted-foreground/70">No deliveries yet.</p>
+        <p className="text-[12px] text-muted-foreground">No deliveries yet.</p>
       )}
       {!isLoading && deliveries.slice(0, 5).map((d) => (
-        <div key={d.id} className="flex items-center gap-3 py-1 text-xs">
+        <div key={d.id} className="flex items-center gap-3 py-1.5 text-[12px]">
           <StatusBadge status={d.status} />
           <span className="font-mono text-muted-foreground">{d.event}</span>
           {d.response_status && (
-            <span className="text-muted-foreground/70">HTTP {d.response_status}</span>
+            <span className="text-muted-foreground tabular-nums">HTTP {d.response_status}</span>
           )}
-          <span className="text-muted-foreground/70 ml-auto">{new Date(d.created_at).toLocaleString()}</span>
+          <span className="text-muted-foreground ml-auto tabular-nums">{new Date(d.created_at).toLocaleString()}</span>
         </div>
       ))}
     </div>
@@ -136,28 +136,28 @@ function WebhookRow({ webhook }: { webhook: WebhookSubscription }) {
   })
 
   return (
-    <div className="border-b border-border/30 last:border-0">
+    <div className="border-b border-border/50 last:border-0">
       <div
-        className="flex items-center gap-4 px-3 py-2 hover:bg-muted cursor-pointer"
+        className="flex items-center gap-4 px-4 py-3 hover:bg-accent/50 cursor-pointer transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
-        {expanded ? <ChevronDown size={14} className="text-muted-foreground/70" /> : <ChevronRight size={14} className="text-muted-foreground/70" />}
+        {expanded ? <ChevronDown size={14} className="text-muted-foreground" /> : <ChevronRight size={14} className="text-muted-foreground" />}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground truncate">{webhook.url}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">{webhook.events.join(', ')}</p>
+          <p className="text-[12px] text-muted-foreground mt-0.5">{webhook.events.join(', ')}</p>
         </div>
         <StatusBadge status={webhook.active ? 'active' : 'inactive'} />
         <div className="flex items-center gap-1">
           <button
             onClick={(e) => { e.stopPropagation(); testMutation.mutate() }}
-            className="p-1.5 text-muted-foreground/70 hover:text-primary rounded"
+            className="p-1.5 text-muted-foreground hover:text-primary rounded cursor-pointer transition-colors"
             title="Send test event"
           >
             <Send size={13} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); deleteMutation.mutate() }}
-            className="p-1.5 text-muted-foreground/70 hover:text-red-600 rounded"
+            className="p-1.5 text-muted-foreground hover:text-red-600 rounded cursor-pointer transition-colors"
             title="Delete webhook"
           >
             <Trash2 size={13} />
@@ -180,26 +180,30 @@ function WebhooksPage() {
   return (
     <PageLayout
       title="Webhooks"
+      description="Manage event subscriptions and delivery"
       actions={
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90"
+          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[13px] font-medium text-primary-foreground hover:bg-primary/90 cursor-pointer transition-colors"
         >
           <Plus size={14} /> New Webhook
         </button>
       }
     >
       {showForm && <CreateWebhookForm onClose={() => setShowForm(false)} />}
-      <div className="rounded-md border border-border bg-card">
+      <div className="rounded-lg border border-border bg-card">
         {isLoading && Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="px-3 py-2 border-b border-border/30">
+          <div key={i} className="px-4 py-3 border-b border-border/50">
             <TableRowSkeleton cols={3} />
           </div>
         ))}
         {!isLoading && webhooks.map((w) => <WebhookRow key={w.id} webhook={w} />)}
         {!isLoading && webhooks.length === 0 && (
-          <div className="px-3 py-8 text-center text-muted-foreground/70 text-sm">
-            No webhooks configured.
+          <div className="px-4 py-12 text-center text-muted-foreground">
+            <div className="flex flex-col items-center gap-2">
+              <Webhook size={24} className="text-muted-foreground/40" />
+              <p className="text-[13px]">No webhooks configured.</p>
+            </div>
           </div>
         )}
       </div>

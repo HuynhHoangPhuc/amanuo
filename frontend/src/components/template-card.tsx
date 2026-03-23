@@ -20,7 +20,7 @@ export function TemplateCard({ template, onImport, importing }: TemplateCardProp
   const categoryColor = CATEGORY_COLORS[template.category] ?? CATEGORY_COLORS.other
 
   return (
-    <div className="rounded-md border border-border bg-card p-4 flex flex-col gap-3 hover:bg-accent/50 transition-colors">
+    <div className="rounded-lg border border-border bg-card p-4 flex flex-col gap-3 hover:bg-accent/50 transition-colors">
       <div className="flex items-start justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold text-foreground leading-tight">{template.name}</h3>

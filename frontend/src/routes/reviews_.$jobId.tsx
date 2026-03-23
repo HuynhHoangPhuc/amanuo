@@ -116,12 +116,12 @@ function ReviewDetailPage() {
           {/* Side-by-side panels */}
           <div className="flex-1 grid grid-cols-2 gap-4 min-h-0">
             {/* Left: document viewer */}
-            <div className="rounded-md border border-border bg-card overflow-hidden flex flex-col">
+            <div className="rounded-lg border border-border bg-card overflow-hidden flex flex-col">
               <DocumentViewer src={documentUrl} alt={`Document for job ${jobId}`} />
             </div>
 
             {/* Right: editable fields */}
-            <div className="rounded-md border border-border bg-card overflow-auto p-4">
+            <div className="rounded-lg border border-border bg-card overflow-auto p-4">
               <h2 className="text-sm font-semibold text-foreground mb-4">
                 Extraction Results
                 {job.confidence != null && (

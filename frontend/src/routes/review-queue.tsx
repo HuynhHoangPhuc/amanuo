@@ -19,7 +19,6 @@ function ReviewQueuePage() {
     refetchInterval: 5000,
   })
 
-  // Also show legacy pending_review jobs (no approval policy)
   const { data: pendingJobs, isLoading: loadingPending } = useQuery({
     queryKey: queryKeys.jobs.list('pending_review'),
     queryFn: () => api.get<JobListResponse>('/jobs?status=pending_review&limit=50'),
@@ -29,42 +28,42 @@ function ReviewQueuePage() {
   const isLoading = loadingQueue || loadingPending
 
   return (
-    <PageLayout title="Review Queue" actions={
-      <span className="text-sm text-muted-foreground">
+    <PageLayout title="Review Queue" description="Approval workflow assignments and pending reviews" actions={
+      <span className="text-[12px] font-medium text-muted-foreground tabular-nums">
         {(queue?.total ?? 0) + (pendingJobs?.total ?? 0)} pending
       </span>
     }>
       {isLoading ? <PageSkeleton /> : (
-        <div className="space-y-4 max-w-4xl">
+        <div className="space-y-5 max-w-4xl">
           {/* Approval workflow assignments */}
           {queue && queue.queue.length > 0 && (
             <section>
               <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                <ClipboardCheck size={16} /> My Assignments
+                <ClipboardCheck size={16} className="text-muted-foreground" /> My Assignments
               </h2>
-              <div className="rounded-md border border-border bg-card divide-y divide-border">
+              <div className="rounded-lg border border-border bg-card divide-y divide-border/50">
                 {queue.queue.map((item) => (
                   <Link
                     key={item.assignment_id}
                     to="/review-queue/$jobId"
                     params={{ jobId: item.job_id }}
-                    className="flex items-center justify-between px-4 py-3 hover:bg-muted transition-colors"
+                    className="flex items-center justify-between px-4 py-3 hover:bg-accent/50 transition-colors no-underline cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="font-mono text-xs text-muted-foreground">{item.job_id.slice(0, 8)}</span>
-                      <span className="text-xs px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-700 font-medium capitalize">
+                      <span className="font-mono text-[12px] text-foreground">{item.job_id.slice(0, 8)}</span>
+                      <span className="text-[12px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-400 font-medium capitalize">
                         {item.round_type}
                       </span>
-                      <span className="text-xs text-muted-foreground/70">Round {item.round_number}</span>
+                      <span className="text-[12px] text-muted-foreground tabular-nums">Round {item.round_number}</span>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-3 text-[12px] text-muted-foreground">
                       {item.deadline_at && (
-                        <span className="flex items-center gap-1 text-orange-600">
+                        <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
                           <Clock size={12} />
                           {new Date(item.deadline_at).toLocaleDateString()}
                         </span>
                       )}
-                      <span>{new Date(item.created_at).toLocaleDateString()}</span>
+                      <span className="tabular-nums">{new Date(item.created_at).toLocaleDateString()}</span>
                     </div>
                   </Link>
                 ))}
@@ -76,19 +75,19 @@ function ReviewQueuePage() {
           {pendingJobs && pendingJobs.jobs.length > 0 && (
             <section>
               <h2 className="text-sm font-semibold text-foreground mb-3">Pending Review (Legacy)</h2>
-              <div className="rounded-md border border-border bg-card divide-y divide-border">
+              <div className="rounded-lg border border-border bg-card divide-y divide-border/50">
                 {pendingJobs.jobs.map((job) => (
                   <Link
                     key={job.id}
                     to="/reviews/$jobId"
                     params={{ jobId: job.id }}
-                    className="flex items-center justify-between px-4 py-3 hover:bg-muted transition-colors"
+                    className="flex items-center justify-between px-4 py-3 hover:bg-accent/50 transition-colors no-underline cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="font-mono text-xs text-muted-foreground">{job.id.slice(0, 8)}</span>
+                      <span className="font-mono text-[12px] text-foreground">{job.id.slice(0, 8)}</span>
                       <StatusBadge status={job.status} />
                     </div>
-                    <span className="text-sm text-muted-foreground">{new Date(job.created_at).toLocaleDateString()}</span>
+                    <span className="text-[12px] text-muted-foreground tabular-nums">{new Date(job.created_at).toLocaleDateString()}</span>
                   </Link>
                 ))}
               </div>
@@ -96,7 +95,12 @@ function ReviewQueuePage() {
           )}
 
           {!queue?.queue.length && !pendingJobs?.jobs.length && (
-            <p className="text-sm text-muted-foreground/70 py-8 text-center">No reviews pending.</p>
+            <div className="rounded-lg border border-border bg-card py-12 text-center text-muted-foreground">
+              <div className="flex flex-col items-center gap-2">
+                <ClipboardCheck size={24} className="text-muted-foreground/40" />
+                <p className="text-[13px]">No reviews pending.</p>
+              </div>
+            </div>
           )}
         </div>
       )}

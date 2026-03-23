@@ -9,7 +9,7 @@ import type { PipelineResponse, PipelineCreateRequest } from '#/lib/types'
 import { PageLayout } from '#/components/page-layout'
 import { TableRowSkeleton } from '#/components/loading-skeleton'
 import { useToast } from '#/components/toast-provider'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, GitBranch, ChevronDown, ChevronRight } from 'lucide-react'
 
 export const Route = createFileRoute('/pipelines')({ component: PipelinesPage })
 
@@ -46,31 +46,31 @@ function CreatePipelineForm({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-2xl rounded-md bg-card shadow-xl p-6 space-y-4"
+        className="w-full max-w-2xl rounded-lg border border-border bg-card shadow-lg p-6 space-y-4"
       >
         <h2 className="text-base font-semibold text-foreground">New Pipeline</h2>
         <input
-          className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           placeholder="Pipeline name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
         />
         <input
-          className="w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           placeholder="Description (optional)"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
         <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1">
+          <label className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
             Config (YAML)
           </label>
           <textarea
-            className="w-full rounded-md border border-border px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-[13px] font-mono focus:outline-none focus:ring-2 focus:ring-ring resize-none"
             rows={10}
             value={config}
             onChange={(e) => setConfig(e.target.value)}
@@ -82,16 +82,16 @@ function CreatePipelineForm({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted"
+            className="px-4 py-2 text-sm rounded-md border border-border hover:bg-accent cursor-pointer transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={mutation.isPending}
-            className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 cursor-pointer transition-colors"
           >
-            {mutation.isPending ? 'Creating…' : 'Create'}
+            {mutation.isPending ? 'Creating...' : 'Create'}
           </button>
         </div>
       </form>
@@ -122,10 +122,11 @@ function PipelinesPage() {
   return (
     <PageLayout
       title="Pipelines"
+      description="Configure extraction provider chains"
       actions={
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90"
+          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[13px] font-medium text-primary-foreground hover:bg-primary/90 cursor-pointer transition-colors"
         >
           <Plus size={14} /> New Pipeline
         </button>
@@ -135,37 +136,40 @@ function PipelinesPage() {
       <div className="space-y-3">
         {isLoading &&
           Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="rounded-md border border-border bg-card p-4">
+            <div key={i} className="rounded-lg border border-border bg-card p-4">
               <TableRowSkeleton cols={1} />
             </div>
           ))}
         {!isLoading && pipelines.map((p) => (
-          <div key={p.id} className="rounded-md border border-border bg-card">
+          <div key={p.id} className="rounded-lg border border-border bg-card">
             <div
-              className="flex items-center justify-between px-3 py-3 cursor-pointer hover:bg-muted"
+              className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-accent/50 transition-colors"
               onClick={() => setExpanded(expanded === p.id ? null : p.id)}
             >
-              <div>
-                <p className="font-medium text-foreground text-sm">{p.name}</p>
-                {p.description && (
-                  <p className="text-xs text-muted-foreground mt-0.5">{p.description}</p>
-                )}
+              <div className="flex items-center gap-3">
+                {expanded === p.id ? <ChevronDown size={14} className="text-muted-foreground" /> : <ChevronRight size={14} className="text-muted-foreground" />}
+                <div>
+                  <p className="font-medium text-foreground text-sm">{p.name}</p>
+                  {p.description && (
+                    <p className="text-[12px] text-muted-foreground mt-0.5">{p.description}</p>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-xs text-muted-foreground/70">
+                <span className="text-[12px] text-muted-foreground tabular-nums">
                   {new Date(p.updated_at).toLocaleDateString()}
                 </span>
                 <button
                   onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(p.id) }}
-                  className="text-red-400 hover:text-red-600 p-1"
+                  className="text-red-400 hover:text-red-600 p-1 cursor-pointer transition-colors"
                 >
                   <Trash2 size={14} />
                 </button>
               </div>
             </div>
             {expanded === p.id && (
-              <div className="border-t border-border/50 px-3 py-2">
-                <pre className="text-xs font-mono text-foreground bg-muted rounded-md p-3 overflow-auto max-h-48">
+              <div className="border-t border-border px-4 py-3">
+                <pre className="text-[13px] font-mono text-foreground bg-muted rounded-md p-3 overflow-auto max-h-48">
                   {p.config}
                 </pre>
               </div>
@@ -173,8 +177,11 @@ function PipelinesPage() {
           </div>
         ))}
         {!isLoading && pipelines.length === 0 && (
-          <div className="rounded-md border border-border bg-card px-3 py-8 text-center text-muted-foreground/70 text-sm">
-            No pipelines yet.
+          <div className="rounded-lg border border-border bg-card px-4 py-12 text-center text-muted-foreground">
+            <div className="flex flex-col items-center gap-2">
+              <GitBranch size={24} className="text-muted-foreground/40" />
+              <p className="text-[13px]">No pipelines yet.</p>
+            </div>
           </div>
         )}
       </div>
